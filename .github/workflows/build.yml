@@ -110,7 +110,7 @@ jobs:
           skip-existing: true
   release:
     name: Add ${{ matrix.artifact }} to release
-    if: github.repository == 'Eeems-Org/remarkable-update-image' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
+    if: github.repository == 'Eeems/remarkable-update-image' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
     needs:
       - build-wheel
       - build-sdist
