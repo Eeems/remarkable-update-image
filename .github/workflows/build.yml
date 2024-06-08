@@ -42,6 +42,7 @@ jobs:
           key: test-files-${{ hashFiles('Makefile') }}
       - name: Run tests
         run: make test
+        shell: bash
   build-wheel:
     name: Build ${{ matrix.os}}.${{ matrix.python }} wheel
     needs: [test]
@@ -71,6 +72,7 @@ jobs:
         run: pip install build
       - name: Building package
         run: make wheel
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
@@ -96,6 +98,7 @@ jobs:
         run: pip install build
       - name: Building package
         run: make sdist
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: pip-sdist
