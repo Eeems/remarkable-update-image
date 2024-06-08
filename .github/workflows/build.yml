@@ -41,6 +41,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: 'pip'
+      - name: Install wheel
+        run: pip install wheel
       - name: Cache test files
         uses: actions/cache@v4
         with:
@@ -76,6 +78,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: 'pip'
+      - name: Install wheel
+        run: pip install wheel
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -108,6 +112,8 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+      - name: Install wheel
+        run: pip install wheel
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
