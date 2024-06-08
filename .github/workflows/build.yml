@@ -23,10 +23,18 @@ jobs:
           - '3.11'
           - '3.12'
     steps:
+      - name: Debug flags
+        shell: bash
+        if: runner.debug == '1'
+        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           version: "25.x"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install coreutils for macOS
+        if: matrix.os == 'macos'
+        run: brew install coreutils
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,12 +45,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            .venv/bin/codexctl.bin
+            .venv/bin/codexctl.*
             .venv/*_reMarkable2-*.signed
           key: test-files-${{ hashFiles('Makefile') }}
       - name: Run tests
-        run: make test
         shell: bash
+        run: make ${{ env.FLAGS }} test
   build-wheel:
     name: Build ${{ matrix.os}}.${{ matrix.python }} wheel
     needs: [test]
@@ -57,6 +65,10 @@ jobs:
           - '3.11'
           - '3.12'
     steps:
+      - name: Debug flags
+        shell: bash
+        if: runner.debug == '1'
+        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - name: Setup Python
@@ -68,11 +80,13 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: "25.x"
-      - name: Install build tool
-        run: pip install build
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install coreutils for macOS
+        if: matrix.os == 'macos'
+        run: brew install coreutils
       - name: Building package
-        run: make wheel
         shell: bash
+        run: make ${{ env.FLAGS }} wheel
       - uses: actions/upload-artifact@v4
         with:
           name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
@@ -83,6 +97,10 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
+      - name: Debug flags
+        shell: bash
+        if: runner.debug == '1'
+        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - name: Setup Python
@@ -94,11 +112,10 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: "25.x"
-      - name: Install build tool
-        run: pip install build
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Building package
-        run: make sdist
         shell: bash
+        run: make ${{ env.FLAGS }} sdist
       - uses: actions/upload-artifact@v4
         with:
           name: pip-sdist
