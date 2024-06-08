@@ -10,10 +10,14 @@ on:
 permissions: read-all
 jobs:
   test:
-    name: Test with python ${{ matrix.python }}
-    runs-on: ubuntu-latest
+    name: Test ${{ matrix.os }}.${{ matrix.python }}
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
+        os:
+          - ubuntu
+          - macos
+          - windows
         python:
           - '3.11'
           - '3.12'
@@ -38,11 +42,15 @@ jobs:
       - name: Run tests
         run: make test
   build-wheel:
-    name: Build wheel with python ${{ matrix.python }}
+    name: Build ${{ matrix.os}}.${{ matrix.python }} wheel
     needs: [test]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       matrix:
+        os:
+          - ubuntu
+          - macos
+          - windows
         python:
           - '3.11'
           - '3.12'
@@ -64,7 +72,7 @@ jobs:
         run: make wheel
       - uses: actions/upload-artifact@v4
         with:
-          name: pip-wheel-${{ matrix.python }}
+          name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
           path: dist/*
           if-no-files-found: error
   build-sdist:
@@ -125,8 +133,12 @@ jobs:
       matrix:
         artifact:
           - 'pip-sdist'
-          - 'pip-wheel-3.11'
-          - 'pip-wheel-3.12'
+          - 'pip-wheel-ubuntu-3.11'
+          - 'pip-wheel-ubuntu-3.12'
+          - 'pip-wheel-macos-3.11'
+          - 'pip-wheel-macos-3.12'
+          - 'pip-wheel-windows-3.11'
+          - 'pip-wheel-windows-3.12'
     permissions:
       contents: write
     steps:
