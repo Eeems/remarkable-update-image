@@ -76,3 +76,35 @@ struct cpio_newcrc_header{
 c_magic = 070702
 c_check is least-significant 32 bits of the sum of all bytes in file data treated as unsigned integers
 """
+
+
+class header_old_cpio_le(LittleEndianStructure):
+    pass
+
+
+class header_old_cpio_be(BigEndianStructure):
+    pass
+
+
+class cpio_odc_header_le(LittleEndianStructure):
+    pass
+
+
+class cpio_odc_header_be(BigEndianStructure):
+    pass
+
+
+class cpio_newc_header_le(LittleEndianStructure):
+    pass
+
+
+class cpio_newc_header_be(BigEndianStructure):
+    pass
+
+
+class cpio_newcrc_header_le(LittleEndianStructure):
+    pass
+
+
+class cpio_newcrc_header_be(BigEndianStructure):
+    pass
