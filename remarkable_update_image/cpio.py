@@ -1,3 +1,5 @@
+from ctypes import c_ushort
+from ctypes import c_char
 from ctypes import LittleEndianStructure
 from ctypes import BigEndianStructure
 
@@ -68,7 +70,7 @@ struct cpio_newc_header {
    char    c_namesize[8];
    char    c_check[8];
 };
-c_magic = 070701
+c_magic = '070701'
 
 struct cpio_newcrc_header{
     cpio_newc_header;
@@ -77,34 +79,129 @@ c_magic = 070702
 c_check is least-significant 32 bits of the sum of all bytes in file data treated as unsigned integers
 """
 
+_header_old_cpio = [
+    ("c_magic", c_ushort),
+    ("c_dev", c_ushort),
+    ("c_ino", c_ushort),
+    ("c_mode", c_ushort),
+    ("c_uid", c_ushort),
+    ("c_gid", c_ushort),
+    ("c_nlink", c_ushort),
+    ("c_rdev", c_ushort),
+    ("c_mtime", c_ushort * 2),
+    ("c_namesize", c_ushort),
+    ("c_filesize", c_ushort * 2),
+]
+
 
 class header_old_cpio_le(LittleEndianStructure):
-    pass
+    __fields__ = _header_old_cpio
+
+    def verify(self):
+        if self.c_magic != 0x070707:
+            raise MagicError(
+                f"{self} magic bytes do not match! "
+                f"expected={to_hex(0x070707)}, "
+                f"actual={to_hex(self.c_magic)}"
+            )
 
 
 class header_old_cpio_be(BigEndianStructure):
-    pass
+    __fields__ = _header_old_cpio
+
+    def verify(self):
+        if self.c_magic != 0x070707:
+            raise MagicError(
+                f"{self} magic bytes do not match! "
+                f"expected={to_hex(0x070707)}, "
+                f"actual={to_hex(self.c_magic)}"
+            )
+
+
+_cpio_odc_header = [
+    ("c_magic", c_char * 6),
+    ("c_dev", c_char * 6),
+    ("c_ino", c_char * 6),
+    ("c_mode", c_char * 6),
+    ("c_uid", c_char * 6),
+    ("c_gid", c_char * 6),
+    ("c_nlink", c_char * 6),
+    ("c_rdev", c_char * 6),
+    ("c_mtime", c_char * 11),
+    ("c_namesize", c_char * 6),
+    ("c_filesize", c_char * 11),
+]
 
 
 class cpio_odc_header_le(LittleEndianStructure):
-    pass
+    __fields__ = _cpio_odc_header
+
+    def verify(self):
+        if self.c_magic != "070707":
+            raise MagicError(
+                f"{self} magic bytes do not match! "
+                f"expected={to_hex('070707')}, "
+                f"actual={self.c_magic}"
+            )
 
 
 class cpio_odc_header_be(BigEndianStructure):
-    pass
+    __fields__ = _cpio_odc_header
+
+    def verify(self):
+        if self.c_magic != "070707":
+            raise MagicError(
+                f"{self} magic bytes do not match! "
+                f"expected={'070707'}, "
+                f"actual={self.c_magic}"
+            )
+
+
+_cpio_newc_header = [
+    ("c_magic", c_char * 6),
+    ("c_ino", c_char * 8),
+    ("c_mode", c_char * 8),
+    ("c_uid", c_char * 8),
+    ("c_gid", c_char * 8),
+    ("c_nlink", c_char * 8),
+    ("c_mtime", c_char * 8),
+    ("c_filesize", c_char * 8),
+    ("c_devmajor", c_char * 8),
+    ("c_devminor", c_char * 8),
+    ("c_rdevmajor", c_char * 8),
+    ("c_rdevminor", c_char * 8),
+    ("c_namesize", c_char * 8),
+    ("c_check", c_char * 8),
+]
 
 
 class cpio_newc_header_le(LittleEndianStructure):
-    pass
+    __fields__ = _cpio_newc_header
+
+    def verify(self):
+        if self.c_magic != "070701":
+            raise MagicError(
+                f"{self} magic bytes do not match! "
+                f"expected={to_hex('070701')}, "
+                f"actual={self.c_magic}"
+            )
+
+        if self.c_check != "00000000":
+            # TODO - verify data
+            pass
 
 
 class cpio_newc_header_be(BigEndianStructure):
-    pass
+    __fields__ = _cpio_newc_header
 
+    def verify(self):
+        if self.c_magic != "070701":
+            raise MagicError(
+                f"{self} magic bytes do not match! "
+                f"expected={to_hex('070701')}, "
+                f"actual={self.c_magic}"
+            )
 
-class cpio_newcrc_header_le(LittleEndianStructure):
-    pass
-
-
-class cpio_newcrc_header_be(BigEndianStructure):
-    pass
+        if self.c_check != "00000000":
+            # TODO - verify data
+            pass
