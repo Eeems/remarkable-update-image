@@ -7,7 +7,6 @@ import time
 
 from cachetools import TTLCache
 from hashlib import sha256
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
@@ -247,8 +246,8 @@ class UpdateImage(io.RawIOBase):
             assert (
                 blob_end_offset <= blob_length
             ), f"blob end offset is larger than blob length: {blob_end_offset}, {blob_length}"
-            assert blob_end_offset - blob_start_offset == len(
-                data
+            assert (
+                blob_end_offset - blob_start_offset == len(data)
             ), f"blob start and end is larger than data: {blob_end_offset - blob_start_offset}, {len(data)}"
 
             start_offset = blob_offset + blob_start_offset - offset
@@ -262,8 +261,8 @@ class UpdateImage(io.RawIOBase):
             assert (
                 end_offset <= blob_offset + blob_length
             ), f"end offset is larger than size of blob: {end_offset}, {blob_offset + blob_length}"
-            assert end_offset - start_offset == len(
-                data
+            assert (
+                end_offset - start_offset == len(data)
             ), f"size of offsets does not equal size of data, {end_offset - start_offset}, {len(data)}"
             assert end_offset <= len(
                 res

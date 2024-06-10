@@ -37,6 +37,14 @@ OBJ += pyproject.toml
 OBJ += README.md
 OBJ += $(PROTO_OBJ)
 
+ifeq ($(VENV_BIN_ACTIVATE),)
+VENV_BIN_ACTIVATE := .venv/bin/activate
+endif
+
+ifeq ($(PYTHON),)
+PYTHON := python
+endif
+
 WHEEL_NAME := $(shell python wheel_name.py)
 
 clean:
@@ -82,7 +90,7 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	@echo "Setting up development virtual env in .venv"
 	python -m venv .venv
 	. ${VENV_BIN_ACTIVATE}; \
-	python -m pip install wheel build; \
+	python -m pip install wheel build ruff; \
 	python -m pip install \
 	    --extra-index-url=https://wheels.eeems.codes/ \
 	    -r requirements.txt
@@ -116,6 +124,22 @@ test: ${VENV_BIN_ACTIVATE} .venv/${FW_VERSION}_reMarkable2-${FW_DATA}.signed $(O
 
 all: release
 
+lint: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff check
+
+lint-fix: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff check
+
+format: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff format --diff
+
+format-fix: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff format
+
 .PHONY: \
 	all \
 	build \
@@ -126,4 +150,8 @@ all: release
 	release \
 	sdist \
 	wheel \
-	test
+	test \
+	lint \
+	lint-fix \
+	format \
+	format-fix
