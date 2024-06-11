@@ -2,6 +2,7 @@ import os
 import sys
 import ext4
 import errno
+import difflib
 
 from tempfile import TemporaryFile
 from ext4 import ChecksumError
@@ -101,6 +102,149 @@ def assert_symlink_to(path, symlink):
     print("pass")
 
 
+def assert_ls(path, expected):
+    global FAILED
+    print(f"checking {path} contents: ", end="")
+    actual = [d.name_str for d, _ in volume.inode_at(path).opendir()]
+    if expected == actual:
+        print("pass")
+        return
+
+    print("fail")
+    FAILED = True
+    for diff in difflib.ndiff(expected, actual):
+        print(f"  {diff}")
+
+
+path = ".venv/rm1_remarkable-production-memfault-image-3.11.3.3-rm1-public.swu"
+if os.path.exists(path):
+    image = UpdateImage(path)
+    volume = ext4.Volume(image)
+    assert_ls(
+        "/",
+        [
+            ".",
+            "..",
+            "lost+found",
+            "bin",
+            "boot",
+            "dev",
+            "etc",
+            "home",
+            "lib",
+            "media",
+            "mnt",
+            "postinst",
+            "proc",
+            "run",
+            "sbin",
+            "srv",
+            "sys",
+            "tmp",
+            "uboot-version",
+            "usr",
+            "var",
+        ],
+    )
+    assert_ls(
+        "/bin",
+        [
+            ".",
+            "..",
+            "rmdir",
+            "sed",
+            "chgrp",
+            "systemctl",
+            "bash.bash",
+            "mountpoint",
+            "chattr",
+            "stat",
+            "mount",
+            "busybox",
+            "systemd-sysext",
+            "networkctl",
+            "chown",
+            "systemd-tmpfiles",
+            "mktemp",
+            "lsmod",
+            "stty",
+            "kill",
+            "cpio",
+            "true",
+            "gzip",
+            "df",
+            "ps",
+            "systemd-sysusers",
+            "systemd-machine-id-setup",
+            "dnsdomainname",
+            "netstat",
+            "dumpkmap",
+            "su.shadow",
+            "systemd-tty-ask-password-agent",
+            "date",
+            "kmod",
+            "systemd-escape",
+            "ln",
+            "loginctl",
+            "watch",
+            "dmesg",
+            "uname",
+            "dd",
+            "chmod",
+            "busybox.nosuid",
+            "busybox.suid",
+            "usleep",
+            "umount.util-linux",
+            "cp",
+            "more",
+            "login",
+            "journalctl",
+            "ls",
+            "false",
+            "systemd-creds",
+            "ash",
+            "hostname",
+            "touch",
+            "base32",
+            "ping",
+            "sleep",
+            "pidof",
+            "systemd-inhibit",
+            "grep",
+            "tar",
+            "getopt",
+            "zcat",
+            "umount",
+            "egrep",
+            "mknod",
+            "rm",
+            "fgrep",
+            "cat",
+            "sh",
+            "pwd",
+            "vi",
+            "rev",
+            "mkdir",
+            "systemd-hwdb",
+            "gunzip",
+            "sync",
+            "login.shadow",
+            "lsmod.kmod",
+            "systemd-notify",
+            "systemd-ask-password",
+            "su",
+            "systemd-firstboot",
+            "mv",
+            "udevadm",
+            "bash",
+            "echo",
+            "mount.util-linux",
+            "run-parts",
+        ],
+    )
+    assert_symlink_to("/bin/ash", b"/bin/busybox.nosuid")
+    image.close()
+
 image = UpdateImage(".venv/2.15.1.1189_reMarkable2-wVbHkgKisg-.signed")
 volume = ext4.Volume(image)
 print(f"validating {volume.uuid}: ", end="")
@@ -181,10 +325,9 @@ assert_hash(
     "6a67b9873c57fbb8589ef4a4f744beb3",
     "/usr/share/update_engine/update-payload-key.pub.pem",
 )
-print("checking / contents: ", end="")
-print(
-    "pass"
-    if [
+assert_ls(
+    "/",
+    [
         ".",
         "..",
         "lost+found",
@@ -206,9 +349,7 @@ print(
         "uboot-version",
         "usr",
         "var",
-    ]
-    == [d.name_str for d, _ in volume.root.opendir()]
-    else "fail"
+    ],
 )
 assert_symlink_to("/bin/ash", b"/bin/busybox.nosuid")
 
@@ -251,6 +392,8 @@ except Exception as e:
 assert_raw_byte(0x00100000, b"\xa4")
 assert_raw_byte(0x00100001, b"\x81")
 assert_raw_byte(0x00100002, b"\x00")
+
+image.close()
 
 if FAILED:
     sys.exit(1)

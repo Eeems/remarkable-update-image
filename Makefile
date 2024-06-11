@@ -120,7 +120,7 @@ $(PROTO_OBJ): $(PROTO_SOURCE) requirements.txt
 
 test: ${VENV_BIN_ACTIVATE} .venv/${FW_VERSION}_reMarkable2-${FW_DATA}.signed $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
-	python test.py
+	python -u test.py
 
 all: release
 

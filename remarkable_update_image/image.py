@@ -6,7 +6,8 @@ import sys
 import time
 import libconf
 
-from gzip import GzipFile
+from indexed_gzip import IndexedGzipFile as GzipFile
+
 from cachetools import TTLCache
 from hashlib import sha256
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
@@ -251,8 +252,8 @@ class ProtobufUpdateImage(io.RawIOBase):
             assert (
                 blob_end_offset <= blob_length
             ), f"blob end offset is larger than blob length: {blob_end_offset}, {blob_length}"
-            assert (
-                blob_end_offset - blob_start_offset == len(data)
+            assert blob_end_offset - blob_start_offset == len(
+                data
             ), f"blob start and end is larger than data: {blob_end_offset - blob_start_offset}, {len(data)}"
 
             start_offset = blob_offset + blob_start_offset - offset
@@ -266,8 +267,8 @@ class ProtobufUpdateImage(io.RawIOBase):
             assert (
                 end_offset <= blob_offset + blob_length
             ), f"end offset is larger than size of blob: {end_offset}, {blob_offset + blob_length}"
-            assert (
-                end_offset - start_offset == len(data)
+            assert end_offset - start_offset == len(
+                data
             ), f"size of offsets does not equal size of data, {end_offset - start_offset}, {len(data)}"
             assert end_offset <= len(
                 res
@@ -284,6 +285,10 @@ class CPIOUpdateImage(io.RawIOBase):
     def __init__(self, update_file, cache_size=500, cache_ttl=60):
         self.update_file = update_file
         self.cache_size = cache_size
+        self._cache = BlockCache(
+            maxsize=cache_size * 1024 * 1024,
+            ttl=cache_ttl,
+        )
         self._archive = Archive(self.update_file)
         self._archive.open()
         if b"sw-description" not in self._archive.keys():
@@ -306,7 +311,7 @@ class CPIOUpdateImage(io.RawIOBase):
         # TODO - handle possibilities of multiple images
         info = self._info["stable"]["copy1"]["images"][0]
         entry = self._archive[info["filename"]]
-        self._image = GzipFile(entry.name, fileobj=entry)
+        self._image = GzipFile(fileobj=entry, mode="rb")
 
     def verify(self, publickey):
         # TODO - verify signature
@@ -339,11 +344,14 @@ class CPIOUpdateImage(io.RawIOBase):
 
     @property
     def cache(self):
-        return None
+        return self._cache
 
     @property
     def size(self):
         return self._image.size
+
+    def expire(self):
+        self._cache.expire()
 
     def writable(self):
         return False
@@ -361,10 +369,20 @@ class CPIOUpdateImage(io.RawIOBase):
         return self._image.tell()
 
     def read(self, size=-1):
-        return self._image.read(size)
+        key = (self.tell(), size)
+        if key in self._cache:
+            return self._cache[key]
+
+        self._cache[key] = data = self._image.read(size)
+        return data
 
     def peek(self, size=0):
-        return self._image.peek(size)
+        key = (self.tell(), size)
+        if key in self._cache:
+            return self._cache[key]
+
+        self._cache[key] = data = self._image.peek(size)
+        return data
 
 
 class UpdateImage:
