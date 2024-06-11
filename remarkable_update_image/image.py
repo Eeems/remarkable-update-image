@@ -252,8 +252,8 @@ class ProtobufUpdateImage(io.RawIOBase):
             assert (
                 blob_end_offset <= blob_length
             ), f"blob end offset is larger than blob length: {blob_end_offset}, {blob_length}"
-            assert blob_end_offset - blob_start_offset == len(
-                data
+            assert (
+                blob_end_offset - blob_start_offset == len(data)
             ), f"blob start and end is larger than data: {blob_end_offset - blob_start_offset}, {len(data)}"
 
             start_offset = blob_offset + blob_start_offset - offset
@@ -267,8 +267,8 @@ class ProtobufUpdateImage(io.RawIOBase):
             assert (
                 end_offset <= blob_offset + blob_length
             ), f"end offset is larger than size of blob: {end_offset}, {blob_offset + blob_length}"
-            assert end_offset - start_offset == len(
-                data
+            assert (
+                end_offset - start_offset == len(data)
             ), f"size of offsets does not equal size of data, {end_offset - start_offset}, {len(data)}"
             assert end_offset <= len(
                 res
