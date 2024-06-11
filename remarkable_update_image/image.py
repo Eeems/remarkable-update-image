@@ -4,15 +4,20 @@ import os
 import struct
 import sys
 import time
+import libconf
 
+from gzip import GzipFile
 from cachetools import TTLCache
 from hashlib import sha256
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
+
 from .update_metadata_pb2 import DeltaArchiveManifest
 from .update_metadata_pb2 import InstallOperation
 from .update_metadata_pb2 import Signatures
+
+from .cpio import Archive
 
 
 def sizeof_fmt(num, suffix="B"):
@@ -55,7 +60,7 @@ class UpdateImageSignatureException(UpdateImageException):
         self.actual_hash = actual_hash
 
 
-class UpdateImage(io.RawIOBase):
+class ProtobufUpdateImage(io.RawIOBase):
     _manifest = None
     _offset = -1
     _size = 0
@@ -246,8 +251,8 @@ class UpdateImage(io.RawIOBase):
             assert (
                 blob_end_offset <= blob_length
             ), f"blob end offset is larger than blob length: {blob_end_offset}, {blob_length}"
-            assert (
-                blob_end_offset - blob_start_offset == len(data)
+            assert blob_end_offset - blob_start_offset == len(
+                data
             ), f"blob start and end is larger than data: {blob_end_offset - blob_start_offset}, {len(data)}"
 
             start_offset = blob_offset + blob_start_offset - offset
@@ -261,8 +266,8 @@ class UpdateImage(io.RawIOBase):
             assert (
                 end_offset <= blob_offset + blob_length
             ), f"end offset is larger than size of blob: {end_offset}, {blob_offset + blob_length}"
-            assert (
-                end_offset - start_offset == len(data)
+            assert end_offset - start_offset == len(
+                data
             ), f"size of offsets does not equal size of data, {end_offset - start_offset}, {len(data)}"
             assert end_offset <= len(
                 res
@@ -273,3 +278,101 @@ class UpdateImage(io.RawIOBase):
             len(res) == size
         ), f"size of data does not match expected size: {len(res)}, {size}"
         return bytes(res)
+
+
+class CPIOUpdateImage(io.RawIOBase):
+    def __init__(self, update_file, cache_size=500, cache_ttl=60):
+        self.update_file = update_file
+        self.cache_size = cache_size
+        self._archive = Archive(self.update_file)
+        self._archive.open()
+        if b"sw-description" not in self._archive.keys():
+            print(self._archive.keys())
+            raise UpdateImageException("Not a swupdate file")
+
+        info = libconf.loads(self._archive["sw-description"].read().decode("utf-8"))[
+            "software"
+        ]
+        if "reMarkable1" in info:
+            self._info = info["reMarkable1"]
+
+        elif "reMarkable2" in info:
+            self._info = info["reMarkable2"]
+
+        else:
+            raise UpdateImageException("Unsupported swupdate file")
+
+        # TODO - handle non-stable images
+        # TODO - handle possibilities of multiple images
+        info = self._info["stable"]["copy1"]["images"][0]
+        entry = self._archive[info["filename"]]
+        self._image = GzipFile(entry.name, fileobj=entry)
+
+    def verify(self, publickey):
+        # TODO - verify signature
+        def verify_hash(expected_hash, entry):
+            actual_hash = sha256(entry.peek()).hexdigest()
+            if expected_hash != actual_hash:
+                raise UpdateImageException(
+                    "Actual hash does not match metadata hash",
+                    expected_hash,
+                    actual_hash,
+                )
+
+        def verify_copy(copy):
+            for image in copy["images"]:
+                verify_hash(image["sha256"], self._archive[image["filename"]])
+
+            for image in copy.get("files", []):
+                verify_hash(image["sha256"], self._archive[image["filename"]])
+
+            for image in copy.get("scripts", []):
+                verify_hash(image["sha256"], self._archive[image["filename"]])
+
+        for copy in ("copy1", "copy2"):
+            verify_copy(self._info["stable"][copy])
+
+    @property
+    def signature(self):
+        # TODO - get from entry
+        return None
+
+    @property
+    def cache(self):
+        return None
+
+    @property
+    def size(self):
+        return self._image.size
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
+
+    def readable(self):
+        return True
+
+    def seek(self, offset, whence=os.SEEK_SET):
+        return self._image.seek(offset, whence)
+
+    def tell(self):
+        return self._image.tell()
+
+    def read(self, size=-1):
+        return self._image.read(size)
+
+    def peek(self, size=0):
+        return self._image.peek(size)
+
+
+class UpdateImage:
+    def __new__(cls, *args, **kwds):
+        try:
+            return ProtobufUpdateImage(*args, **kwds)
+
+        except UpdateImageException:
+            pass
+
+        return CPIOUpdateImage(*args, **kwds)
