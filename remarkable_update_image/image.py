@@ -100,7 +100,7 @@ class ProtobufUpdateImage(io.RawIOBase):
         signed_hash = _publickey.recover_data_from_signature(
             self.signature,
             PKCS1v15(),
-            SHA256,
+            SHA256(),
         )
         if actual_hash != signed_hash:
             raise UpdateImageSignatureException(

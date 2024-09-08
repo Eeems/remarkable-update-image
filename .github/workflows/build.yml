@@ -46,7 +46,7 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "25.x"
+          version: "27.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install coreutils for macOS
         if: matrix.os == 'macos'
@@ -99,7 +99,7 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "25.x"
+          version: "27.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install coreutils for macOS
         if: matrix.os == 'macos'
@@ -133,7 +133,7 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "25.x"
+          version: "27.3"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Building package
         shell: bash
