@@ -292,7 +292,6 @@ class CPIOUpdateImage(io.RawIOBase):
         self._archive = Archive(self.update_file)
         self._archive.open()
         if b"sw-description" not in self._archive.keys():
-            print(self._archive.keys())
             raise UpdateImageException("Not a swupdate file")
 
         info = libconf.loads(self._archive["sw-description"].read().decode("utf-8"))[
@@ -303,6 +302,9 @@ class CPIOUpdateImage(io.RawIOBase):
 
         elif "reMarkable2" in info:
             self._info = info["reMarkable2"]
+
+        elif "ferrari" in info:
+            self._info = info["ferrari"]
 
         else:
             raise UpdateImageException("Unsupported swupdate file")
