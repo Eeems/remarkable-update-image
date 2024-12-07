@@ -90,7 +90,7 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	@echo "Setting up development virtual env in .venv"
 	python -m venv .venv
 	. ${VENV_BIN_ACTIVATE}; \
-	python -m pip install wheel build ruff protobuf-protoc-bin==25.5 auditwheel; \
+	python -m pip install wheel build ruff protobuf-protoc-bin==27.3 auditwheel; \
 	python -m pip install \
 	    --extra-index-url=https://wheels.eeems.codes/ \
 	    -r requirements.txt
