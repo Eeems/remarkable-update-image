@@ -110,7 +110,7 @@ jobs:
         if: matrix.os == 'ubuntu'
         shell: bash
         run: |
-          script=$(<<EOF
+          script=$(cat <<EOF
           python_version=${{ matrix.python }}
           python_version=cp${python_version//.}
           export PATH=$PATH:/opt/python/$python_version-$python_version/bin
