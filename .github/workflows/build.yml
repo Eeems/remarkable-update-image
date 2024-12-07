@@ -112,10 +112,7 @@ jobs:
         if: matrix.os == 'ubuntu'
         shell: bash
         run: |
-          docker run -v $(pwd):/src \
-            quay.io/pypa/manylinux_2_34_x86_64:latest \
-            bash \
-          <<EOF
+          script=$(<<EOF
           python_version=${{ matrix.python }}
           python_version=cp${python_version//.}
           export PATH=$PATH:/opt/python/$python_version-$python_version/bin
@@ -123,6 +120,10 @@ jobs:
           pip install auditwheel
           auditwheel repair dist/*.whl
           EOF
+          )
+          docker run -v $(pwd):/src \
+            quay.io/pypa/manylinux_2_34_x86_64:latest \
+            /bin/bash -c "$script"
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu'
         with:
