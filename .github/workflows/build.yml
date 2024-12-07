@@ -111,11 +111,12 @@ jobs:
         shell: bash
         run: |
           script=$(cat <<EOF
+          cd /src
           python_version=${{ matrix.python }}
           python_version=cp${python_version//.}
           export PATH=$PATH:/opt/python/$python_version-$python_version/bin
           make ${{ env.FLAGS }} wheel
-          pip install auditwheel
+          python -m pip install auditwheel
           auditwheel repair dist/*.whl
           EOF
           )
