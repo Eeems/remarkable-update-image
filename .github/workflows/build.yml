@@ -110,14 +110,13 @@ jobs:
         if: matrix.os == 'ubuntu'
         shell: bash
         run: |
-          script=$(cat <<EOF
-          cd /src
           python_version=${{ matrix.python }}
           python_version=cp${python_version//.}
-          export PATH=$PATH:/opt/python/$python_version-$python_version/bin
-          make ${{ env.FLAGS }} wheel
-          python -m pip install auditwheel
-          auditwheel repair dist/*.whl
+          script=$(cat <<EOF
+          cd /src;
+          export PATH=\$PATH:/opt/python/$python_version-$python_version/bin;
+          make ${{ env.FLAGS }} wheel;
+          auditwheel repair dist/*.whl;
           EOF
           )
           docker run -v $(pwd):/src \
