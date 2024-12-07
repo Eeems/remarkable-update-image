@@ -43,11 +43,6 @@ jobs:
         shell: bash
         if: runner.debug == '1'
         run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: "27.3"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install coreutils for macOS
         if: matrix.os == 'macos'
         run: brew install coreutils
@@ -90,27 +85,48 @@ jobs:
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - name: Setup Python
+        if: matrix.os != 'ubuntu'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           cache: 'pip'
       - name: Install wheel
+        if: matrix.os != 'ubuntu'
         run: pip install wheel
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: "27.3"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install coreutils for macOS
         if: matrix.os == 'macos'
         run: brew install coreutils
       - name: Building package
+        if: matrix.os != 'ubuntu'
         shell: bash
         run: make ${{ env.FLAGS }} wheel
       - uses: actions/upload-artifact@v4
+        if: matrix.os != 'ubuntu'
         with:
           name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
           path: dist/*
+          if-no-files-found: error
+      - name: Building manylinux package
+        if: matrix.os == 'ubuntu'
+        shell: bash
+        run: |
+          python_version=${{ matrix.python }}
+          python_version=cp${python_version//.}
+          script=$(cat <<EOF
+          cd /src;
+          export PATH=\$PATH:/opt/python/$python_version-$python_version/bin;
+          make ${{ env.FLAGS }} wheel;
+          auditwheel repair dist/*.whl;
+          EOF
+          )
+          docker run -v $(pwd):/src \
+            quay.io/pypa/manylinux_2_34_x86_64:latest \
+            /bin/bash -c "$script"
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu'
+        with:
+          name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
+          path: wheelhouse/*
           if-no-files-found: error
   build-sdist:
     name: Build sdist
@@ -130,11 +146,6 @@ jobs:
           cache: 'pip'
       - name: Install wheel
         run: pip install wheel
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: "27.3"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Building package
         shell: bash
         run: make ${{ env.FLAGS }} sdist
@@ -152,6 +163,8 @@ jobs:
       matrix:
         artifact:
           - 'pip-sdist'
+          - 'pip-wheel-ubuntu-3.11'
+          - 'pip-wheel-ubuntu-3.12'
           - 'pip-wheel-macos-3.11'
           - 'pip-wheel-macos-3.12'
           - 'pip-wheel-windows-3.11'
