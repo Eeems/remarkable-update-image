@@ -85,18 +85,37 @@ jobs:
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - name: Setup Python
+        if: matrix.os != 'ubuntu'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           cache: 'pip'
       - name: Install wheel
+        if: matrix.os != 'ubuntu'
         run: pip install wheel
       - name: Install coreutils for macOS
         if: matrix.os == 'macos'
         run: brew install coreutils
       - name: Building package
+        if: matrix.os != 'ubuntu'
         shell: bash
         run: make ${{ env.FLAGS }} wheel
+      - name: Building manylinux package
+        shell: bash
+        run: |
+          docker run -v $(pwd):/src \
+            quay.io/pypa/manylinux_2_34_x86_64:latest \
+            bash \
+          <<EOF
+          python_version=${{ matrix.python }}
+          python_version=cp${python_version//.}
+          export PATH=$PATH:/opt/python/$python_version-$python_version/bin
+          make ${{ env.FLAGS }} wheel
+          pip install auditwheel
+          auditwheel repair dist/*.whl
+          rm dist/*.whl
+          cp wheelhouse/*.whl dist/
+          EOF
       - uses: actions/upload-artifact@v4
         with:
           name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
