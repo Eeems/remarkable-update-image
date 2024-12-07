@@ -102,6 +102,12 @@ jobs:
         if: matrix.os != 'ubuntu'
         shell: bash
         run: make ${{ env.FLAGS }} wheel
+      - uses: actions/upload-artifact@v4
+        if: matrix.os != 'ubuntu'
+        with:
+          name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
+          path: dist/*
+          if-no-files-found: error
       - name: Building manylinux package
         if: matrix.os == 'ubuntu'
         shell: bash
@@ -116,13 +122,12 @@ jobs:
           make ${{ env.FLAGS }} wheel
           pip install auditwheel
           auditwheel repair dist/*.whl
-          rm dist/*.whl
-          cp wheelhouse/*.whl dist/
           EOF
       - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu'
         with:
           name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
-          path: dist/*
+          path: wheelhouse/*
           if-no-files-found: error
   build-sdist:
     name: Build sdist
