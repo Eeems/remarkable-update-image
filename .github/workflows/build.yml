@@ -101,6 +101,7 @@ jobs:
         shell: bash
         run: make ${{ env.FLAGS }} wheel
       - name: Building manylinux package
+        if: matrix.os == 'ubuntu'
         shell: bash
         run: |
           docker run -v $(pwd):/src \
