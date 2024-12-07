@@ -38,5 +38,5 @@ dependencies = {file = ["requirements.txt"]}
 readme = {file= ["README.md"], content-type = "text/markdown"}
 
 [build-system]
-requires = ["setuptools>=42", "wheel", "nuitka", "toml"]
+requires = ["setuptools>=42", "wheel", "nuitka"]
 build-backend = "nuitka.distutils.Build"
