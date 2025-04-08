@@ -7,6 +7,7 @@ authors = [
 description = "Read reMarkable update images"
 requires-python = ">=3.11,<3.13"
 license = "MIT"
+license-files=["LICENSE"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
