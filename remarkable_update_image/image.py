@@ -375,7 +375,13 @@ class CPIOUpdateImage(io.RawIOBase):
         if key in self._cache:
             return self._cache[key]
 
-        self._cache[key] = data = self._image.read(size)
+        data = self._image.read(size)
+        try:
+            self._cache[key] = data
+        except ValueError as err:
+            if str(err) != "value too large":
+                raise err
+
         return data
 
     def peek(self, size=0):
@@ -383,7 +389,13 @@ class CPIOUpdateImage(io.RawIOBase):
         if key in self._cache:
             return self._cache[key]
 
-        self._cache[key] = data = self._image.peek(size)
+        data = self._image.peek(size)
+        try:
+            self._cache[key] = data
+        except ValueError as err:
+            if str(err) != "value too large":
+                raise err
+
         return data
 
 
