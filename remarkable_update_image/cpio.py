@@ -280,7 +280,7 @@ class Entry:
         return False
 
     def seekable(self):
-        return False
+        return True
 
     def readable(self):
         return True

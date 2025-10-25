@@ -21,8 +21,8 @@ jobs:
         uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
       - name: Lint code
         run: make ${{ env.FLAGS }} lint format
   test:
@@ -36,8 +36,8 @@ jobs:
           - macos
           - windows
         python:
-          - '3.11'
-          - '3.12'
+          - "3.11"
+          - "3.12"
     steps:
       - name: Debug flags
         shell: bash
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
+          cache: "pip"
       - name: Install wheel
         run: pip install wheel
       - name: Cache test files
@@ -60,6 +60,7 @@ jobs:
           path: |
             .venv/bin/codexctl.*
             .venv/*_reMarkable2-*.signed
+            .venv/remarkable-production-memfault-image-*-public
           key: test-files-${{ hashFiles('Makefile') }}
       - name: Run tests
         shell: bash
@@ -75,8 +76,8 @@ jobs:
           - macos
           - windows
         python:
-          - '3.11'
-          - '3.12'
+          - "3.11"
+          - "3.12"
     steps:
       - name: Debug flags
         shell: bash
@@ -89,7 +90,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
+          cache: "pip"
       - name: Install wheel
         if: matrix.os != 'ubuntu'
         run: pip install wheel
@@ -142,8 +143,8 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
       - name: Install wheel
         run: pip install wheel
       - name: Building package
@@ -162,13 +163,13 @@ jobs:
     strategy:
       matrix:
         artifact:
-          - 'pip-sdist'
-          - 'pip-wheel-ubuntu-3.11'
-          - 'pip-wheel-ubuntu-3.12'
-          - 'pip-wheel-macos-3.11'
-          - 'pip-wheel-macos-3.12'
-          - 'pip-wheel-windows-3.11'
-          - 'pip-wheel-windows-3.12'
+          - "pip-sdist"
+          - "pip-wheel-ubuntu-3.11"
+          - "pip-wheel-ubuntu-3.12"
+          - "pip-wheel-macos-3.11"
+          - "pip-wheel-macos-3.12"
+          - "pip-wheel-windows-3.11"
+          - "pip-wheel-windows-3.12"
     permissions:
       id-token: write
       contents: write
@@ -195,13 +196,13 @@ jobs:
       fail-fast: false
       matrix:
         artifact:
-          - 'pip-sdist'
-          - 'pip-wheel-ubuntu-3.11'
-          - 'pip-wheel-ubuntu-3.12'
-          - 'pip-wheel-macos-3.11'
-          - 'pip-wheel-macos-3.12'
-          - 'pip-wheel-windows-3.11'
-          - 'pip-wheel-windows-3.12'
+          - "pip-sdist"
+          - "pip-wheel-ubuntu-3.11"
+          - "pip-wheel-ubuntu-3.12"
+          - "pip-wheel-macos-3.11"
+          - "pip-wheel-macos-3.12"
+          - "pip-wheel-windows-3.11"
+          - "pip-wheel-windows-3.12"
     permissions:
       contents: write
     steps:
@@ -214,8 +215,7 @@ jobs:
           name: ${{ matrix.artifact }}
           path: dist
       - name: Upload to release
-        run:
-          find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
+        run: find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}

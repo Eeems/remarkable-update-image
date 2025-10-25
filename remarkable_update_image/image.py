@@ -49,6 +49,9 @@ class BlockCache(TTLCache):
     def max_size_str(self):
         return sizeof_fmt(self.maxsize)
 
+    def will_fit(self, value) -> bool:
+        return self.maxsize >= self.getsizeof(value)
+
 
 class UpdateImageException(Exception):
     pass
@@ -56,7 +59,7 @@ class UpdateImageException(Exception):
 
 class UpdateImageSignatureException(UpdateImageException):
     def __init__(self, message, signed_hash, actual_hash):
-        super().__init__(self, message)
+        super().__init__(message)
         self.signed_hash = signed_hash
         self.actual_hash = actual_hash
 
@@ -170,11 +173,8 @@ class ProtobufUpdateImage(io.RawIOBase):
                     f"Error: Bz2 compressed data was the wrong length {len(blob_data)}"
                 )
 
-        try:
+        if self._cache.will_fit(blob_data):
             self._cache[blob_offset] = blob_data
-        except ValueError as err:
-            if str(err) != "value too large":
-                raise err
 
         return blob_data
 
@@ -193,7 +193,7 @@ class ProtobufUpdateImage(io.RawIOBase):
         return False
 
     def seekable(self):
-        return False
+        return True
 
     def readable(self):
         return True
@@ -211,7 +211,7 @@ class ProtobufUpdateImage(io.RawIOBase):
         elif whence == os.SEEK_CUR:
             self._pos = min(max(self._pos + offset, 0), self._size)
         elif whence == os.SEEK_END:
-            self._pos = min(max(self._pos + offset + self._size, 0), self._size)
+            self._pos = min(max(self._size + offset, 0), self._size)
         return self._pos
 
     def tell(self):
@@ -355,11 +355,18 @@ class CPIOUpdateImage(io.RawIOBase):
     def expire(self):
         self._cache.expire()
 
+    def close(self):
+        try:
+            self._archive.close()
+
+        finally:
+            super().close()
+
     def writable(self):
         return False
 
     def seekable(self):
-        return False
+        return True
 
     def readable(self):
         return True
@@ -375,7 +382,10 @@ class CPIOUpdateImage(io.RawIOBase):
         if key in self._cache:
             return self._cache[key]
 
-        self._cache[key] = data = self._image.read(size)
+        data = self._image.read(size)
+        if self._cache.will_fit(data):
+            self._cache[key] = data
+
         return data
 
     def peek(self, size=0):
@@ -383,7 +393,10 @@ class CPIOUpdateImage(io.RawIOBase):
         if key in self._cache:
             return self._cache[key]
 
-        self._cache[key] = data = self._image.peek(size)
+        data = self._image.peek(size)
+        if self._cache.will_fit(data):
+            self._cache[key] = data
+
         return data
 
 

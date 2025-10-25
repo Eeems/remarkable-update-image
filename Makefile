@@ -1,8 +1,10 @@
 .DEFAULT_GOAL := all
 VERSION := $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
 PACKAGE := $(shell grep -m 1 name pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
-FW_VERSION := 2.15.1.1189
-FW_DATA := wVbHkgKisg-
+RM2_FW_VERSION := 2.15.1.1189
+RM2_FW_DATA := wVbHkgKisg-
+RM1_FW_VERSION=3.11.3.3
+RMPP_FW_VERSION=3.20.0.92
 
 SHELL := /bin/bash
 ifeq ($(OS),Windows_NT)
@@ -10,8 +12,8 @@ ifeq ($(OS),Windows_NT)
 	ifeq ($(VENV_BIN_ACTIVATE),)
 		VENV_BIN_ACTIVATE := .venv/Scripts/activate
 	endif
-	CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1719419372/windows-latest.zip
-	CODEXCTL_HASH := 9d1467170be4afcab446c509f24f7422cec76b525c9067380f8b9ac43d81f61f
+	CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1752948641/windows-latest.zip
+	CODEXCTL_HASH := a3c2164e8ec4f04bf059dfcd1cc216e5911f24e37ce236c25a8b420421d3266a
 	CODEXCTL_BIN := codexctl.exe
 else
 	ifeq ($(VENV_BIN_ACTIVATE),)
@@ -19,13 +21,13 @@ else
 	endif
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
-		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1719419372/macos-latest.zip
-		CODEXCTL_HASH := 5056e489c8ca346352bfe441229e5c5efb1d9784f806200aa492a512ba636c38
+		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1752948641/macos-latest.zip
+		CODEXCTL_HASH := 34da200b09bba09c92a7b0c39ec5dfc6b0fa5d303a750da5a1c60d715d5016e4
 	else
-		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1719419372/ubuntu-latest.zip
-		CODEXCTL_HASH := 210f68f8a2136120b706c29852f9b7ce306d6e30d2f6124eb23eb25e858685e5
+		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1752948641/ubuntu-latest.zip
+		CODEXCTL_HASH := 209d192788576eb9d631cff8d69702ccf67bc3be07573b0adfe0ea3dc32d0227
 	endif
-	CODEXCTL_BIN := codexctl.bin
+	CODEXCTL_BIN := codexctl
 endif
 
 PROTO_SOURCE := $(wildcard protobuf/*.proto)
@@ -108,9 +110,17 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	unzip -n .venv/codexctl.zip -d .venv/bin
 	chmod +x .venv/bin/${CODEXCTL_BIN}
 
-.venv/${FW_VERSION}_reMarkable2-${FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --out .venv ${FW_VERSION}
+IMAGES := .venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed
+.venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN}
+	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable2 --out .venv ${RM2_FW_VERSION}
 
+IMAGES += .venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public
+.venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public: .venv/bin/${CODEXCTL_BIN}
+	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable1 --out .venv ${RM1_FW_VERSION}
+
+IMAGES += .venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public
+.venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .venv/bin/${CODEXCTL_BIN}
+	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .venv ${RMPP_FW_VERSION}
 
 $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	. ${VENV_BIN_ACTIVATE}; \
@@ -119,7 +129,7 @@ $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	    --proto_path=protobuf \
 	    $(PROTO_SOURCE)
 
-test: ${VENV_BIN_ACTIVATE} .venv/${FW_VERSION}_reMarkable2-${FW_DATA}.signed $(OBJ)
+test: ${VENV_BIN_ACTIVATE} $(IMAGES) $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u test.py
 
