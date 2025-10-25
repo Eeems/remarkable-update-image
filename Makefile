@@ -116,7 +116,7 @@ IMAGES := .venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed
 
 IMAGES += .venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public
 .venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .venv ${RM1_FW_VERSION}
+	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable1 --out .venv ${RM1_FW_VERSION}
 
 IMAGES += .venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public
 .venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .venv/bin/${CODEXCTL_BIN}
