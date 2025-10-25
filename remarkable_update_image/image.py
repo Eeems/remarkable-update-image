@@ -193,7 +193,7 @@ class ProtobufUpdateImage(io.RawIOBase):
         return False
 
     def seekable(self):
-        return False
+        return True
 
     def readable(self):
         return True
@@ -366,7 +366,7 @@ class CPIOUpdateImage(io.RawIOBase):
         return False
 
     def seekable(self):
-        return False
+        return True
 
     def readable(self):
         return True

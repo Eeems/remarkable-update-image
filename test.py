@@ -12,16 +12,9 @@ from hashlib import md5
 from hashlib import sha256
 from remarkable_update_image import UpdateImage
 from remarkable_update_image import UpdateImageSignatureException
+from remarkable_update_image.image import sizeof_fmt
 
 FAILED = False
-
-
-def sizeof_fmt(num, suffix="B"):
-    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
-        if abs(num) < 1024.0:
-            return f"{num:3.1f}{unit}{suffix}"
-        num /= 1024.0
-    return f"{num:.1f}Yi{suffix}"
 
 
 def assert_byte(offset, byte):
@@ -409,7 +402,7 @@ try:
         if "fc7d145e18f14a1a3f435f2fd5ca5924fe8dfe59bf45605dc540deed59551ae4" != digest:
             raise Exception(f"Incorrect digest: {digest}")
 
-        _ = f.write(image.peek())
+        _ = f.write(image.read())
 
     print("pass")
 
