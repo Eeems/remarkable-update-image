@@ -125,133 +125,132 @@ def assert_ls(path, expected):
 
 
 path = ".venv/remarkable-production-memfault-image-3.11.3.3-remarkable1-public"
-if os.path.exists(path):
-    image = UpdateImage(path)
-    volume = ext4.Volume(image)
-    assert_ls(
-        "/",
-        [
-            ".",
-            "..",
-            "lost+found",
-            "bin",
-            "boot",
-            "dev",
-            "etc",
-            "home",
-            "lib",
-            "media",
-            "mnt",
-            "postinst",
-            "proc",
-            "run",
-            "sbin",
-            "srv",
-            "sys",
-            "tmp",
-            "uboot-version",
-            "usr",
-            "var",
-        ],
-    )
-    assert_ls(
-        "/bin",
-        [
-            ".",
-            "..",
-            "rmdir",
-            "sed",
-            "chgrp",
-            "systemctl",
-            "bash.bash",
-            "mountpoint",
-            "chattr",
-            "stat",
-            "mount",
-            "busybox",
-            "systemd-sysext",
-            "networkctl",
-            "chown",
-            "systemd-tmpfiles",
-            "mktemp",
-            "lsmod",
-            "stty",
-            "kill",
-            "cpio",
-            "true",
-            "gzip",
-            "df",
-            "ps",
-            "systemd-sysusers",
-            "systemd-machine-id-setup",
-            "dnsdomainname",
-            "netstat",
-            "dumpkmap",
-            "su.shadow",
-            "systemd-tty-ask-password-agent",
-            "date",
-            "kmod",
-            "systemd-escape",
-            "ln",
-            "loginctl",
-            "watch",
-            "dmesg",
-            "uname",
-            "dd",
-            "chmod",
-            "busybox.nosuid",
-            "busybox.suid",
-            "usleep",
-            "umount.util-linux",
-            "cp",
-            "more",
-            "login",
-            "journalctl",
-            "ls",
-            "false",
-            "systemd-creds",
-            "ash",
-            "hostname",
-            "touch",
-            "base32",
-            "ping",
-            "sleep",
-            "pidof",
-            "systemd-inhibit",
-            "grep",
-            "tar",
-            "getopt",
-            "zcat",
-            "umount",
-            "egrep",
-            "mknod",
-            "rm",
-            "fgrep",
-            "cat",
-            "sh",
-            "pwd",
-            "vi",
-            "rev",
-            "mkdir",
-            "systemd-hwdb",
-            "gunzip",
-            "sync",
-            "login.shadow",
-            "lsmod.kmod",
-            "systemd-notify",
-            "systemd-ask-password",
-            "su",
-            "systemd-firstboot",
-            "mv",
-            "udevadm",
-            "bash",
-            "echo",
-            "mount.util-linux",
-            "run-parts",
-        ],
-    )
-    assert_symlink_to("/bin/ash", b"/bin/busybox.nosuid")
-    image.close()
+image = UpdateImage(path)
+volume = ext4.Volume(image)
+assert_ls(
+    "/",
+    [
+        ".",
+        "..",
+        "lost+found",
+        "bin",
+        "boot",
+        "dev",
+        "etc",
+        "home",
+        "lib",
+        "media",
+        "mnt",
+        "postinst",
+        "proc",
+        "run",
+        "sbin",
+        "srv",
+        "sys",
+        "tmp",
+        "uboot-version",
+        "usr",
+        "var",
+    ],
+)
+assert_ls(
+    "/bin",
+    [
+        ".",
+        "..",
+        "rmdir",
+        "sed",
+        "chgrp",
+        "systemctl",
+        "bash.bash",
+        "mountpoint",
+        "chattr",
+        "stat",
+        "mount",
+        "busybox",
+        "systemd-sysext",
+        "networkctl",
+        "chown",
+        "systemd-tmpfiles",
+        "mktemp",
+        "lsmod",
+        "stty",
+        "kill",
+        "cpio",
+        "true",
+        "gzip",
+        "df",
+        "ps",
+        "systemd-sysusers",
+        "systemd-machine-id-setup",
+        "dnsdomainname",
+        "netstat",
+        "dumpkmap",
+        "su.shadow",
+        "systemd-tty-ask-password-agent",
+        "date",
+        "kmod",
+        "systemd-escape",
+        "ln",
+        "loginctl",
+        "watch",
+        "dmesg",
+        "uname",
+        "dd",
+        "chmod",
+        "busybox.nosuid",
+        "busybox.suid",
+        "usleep",
+        "umount.util-linux",
+        "cp",
+        "more",
+        "login",
+        "journalctl",
+        "ls",
+        "false",
+        "systemd-creds",
+        "ash",
+        "hostname",
+        "touch",
+        "base32",
+        "ping",
+        "sleep",
+        "pidof",
+        "systemd-inhibit",
+        "grep",
+        "tar",
+        "getopt",
+        "zcat",
+        "umount",
+        "egrep",
+        "mknod",
+        "rm",
+        "fgrep",
+        "cat",
+        "sh",
+        "pwd",
+        "vi",
+        "rev",
+        "mkdir",
+        "systemd-hwdb",
+        "gunzip",
+        "sync",
+        "login.shadow",
+        "lsmod.kmod",
+        "systemd-notify",
+        "systemd-ask-password",
+        "su",
+        "systemd-firstboot",
+        "mv",
+        "udevadm",
+        "bash",
+        "echo",
+        "mount.util-linux",
+        "run-parts",
+    ],
+)
+assert_symlink_to("/bin/ash", b"/bin/busybox.nosuid")
+image.close()
 
 cache_size = 1
 raw_cache_size = cache_size * 1024 * 1024
@@ -402,7 +401,7 @@ except OSError as e:
         print(f"  Unexpected error: {os.strerror(e)}")
 
 
-print("checking writing full image to file: ", end="")
+print("checking writing full protobuf image to file: ", end="")
 try:
     image.seek(0, os.SEEK_SET)
     with TemporaryFile(mode="wb") as f:
@@ -410,7 +409,7 @@ try:
         if "fc7d145e18f14a1a3f435f2fd5ca5924fe8dfe59bf45605dc540deed59551ae4" != digest:
             raise Exception(f"Incorrect digest: {digest}")
 
-        f.write(image.peek())
+        _ = f.write(image.peek())
 
     print("pass")
 
@@ -427,6 +426,28 @@ assert_raw_byte(0x00100002, b"\x00")
 
 image.close()
 
+
+path = ".venv/remarkable-production-memfault-image-3.20.0.92-rmpp-public"
+image = UpdateImage(path)
+print("checking writing full cpio image to file: ", end="")
+try:
+    image.seek(0, os.SEEK_SET)
+    with TemporaryFile(mode="wb") as f:
+        digest = sha256(image.peek()).hexdigest()
+        if "e8eec783c885df92d05dd53ba454949b6f0e5bd793038013df092786b54d6d5d" != digest:
+            raise Exception(f"Incorrect digest: {digest}")
+
+        _ = f.write(image.read())
+
+    print("pass")
+
+except Exception as e:
+    FAILED = True
+    print("fail")
+    print("  ", end="")
+    print(e)
+
+image.close()
 
 if FAILED:
     sys.exit(1)

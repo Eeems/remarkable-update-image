@@ -1,9 +1,10 @@
 .DEFAULT_GOAL := all
 VERSION := $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
 PACKAGE := $(shell grep -m 1 name pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
-FW_VERSION := 2.15.1.1189
-FW_DATA := wVbHkgKisg-
-NEW_FW_VERSION=3.11.3.3
+RM2_FW_VERSION := 2.15.1.1189
+RM2_FW_DATA := wVbHkgKisg-
+RM1_FW_VERSION=3.11.3.3
+RMPP_FW_VERSION=3.20.0.92
 
 SHELL := /bin/bash
 ifeq ($(OS),Windows_NT)
@@ -109,12 +110,17 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	unzip -n .venv/codexctl.zip -d .venv/bin
 	chmod +x .venv/bin/${CODEXCTL_BIN}
 
-.venv/${FW_VERSION}_reMarkable2-${FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable2 --out .venv ${FW_VERSION}
+IMAGES := .venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed
+.venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN}
+	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable2 --out .venv ${RM2_FW_VERSION}
 
-.venv/remarkable-production-memfault-image-${NEW_FW_VERSION}-remarkable1-public: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable1 --out .venv ${NEW_FW_VERSION}
+IMAGES += .venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public
+.venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public: .venv/bin/${CODEXCTL_BIN}
+	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .venv ${RM1_FW_VERSION}
 
+IMAGES += .venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public
+.venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .venv/bin/${CODEXCTL_BIN}
+	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .venv ${RMPP_FW_VERSION}
 
 $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	. ${VENV_BIN_ACTIVATE}; \
@@ -123,7 +129,7 @@ $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	    --proto_path=protobuf \
 	    $(PROTO_SOURCE)
 
-test: ${VENV_BIN_ACTIVATE} .venv/${FW_VERSION}_reMarkable2-${FW_DATA}.signed .venv/remarkable-production-memfault-image-${NEW_FW_VERSION}-remarkable1-public $(OBJ)
+test: ${VENV_BIN_ACTIVATE} $(IMAGES) $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u test.py
 

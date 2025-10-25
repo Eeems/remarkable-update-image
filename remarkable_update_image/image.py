@@ -59,7 +59,7 @@ class UpdateImageException(Exception):
 
 class UpdateImageSignatureException(UpdateImageException):
     def __init__(self, message, signed_hash, actual_hash):
-        super().__init__(self, message)
+        super().__init__(message)
         self.signed_hash = signed_hash
         self.actual_hash = actual_hash
 
@@ -354,6 +354,13 @@ class CPIOUpdateImage(io.RawIOBase):
 
     def expire(self):
         self._cache.expire()
+
+    def close(self):
+        try:
+            self._archive.close()
+
+        finally:
+            return super().close()
 
     def writable(self):
         return False
