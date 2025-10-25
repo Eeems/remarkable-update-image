@@ -16,6 +16,14 @@ from remarkable_update_image import UpdateImageSignatureException
 FAILED = False
 
 
+def sizeof_fmt(num, suffix="B"):
+    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
 def assert_byte(offset, byte):
     global FAILED
     reader.seek(offset)
@@ -116,7 +124,7 @@ def assert_ls(path, expected):
         print(f"  {diff}")
 
 
-path = ".venv/rm1_remarkable-production-memfault-image-3.11.3.3-rm1-public.swu"
+path = ".venv/remarkable-production-memfault-image-3.11.3.3-remarkable1-public"
 if os.path.exists(path):
     image = UpdateImage(path)
     volume = ext4.Volume(image)
@@ -244,6 +252,30 @@ if os.path.exists(path):
     )
     assert_symlink_to("/bin/ash", b"/bin/busybox.nosuid")
     image.close()
+
+cache_size = 1
+raw_cache_size = cache_size * 1024 * 1024
+read_size = raw_cache_size + 1
+with UpdateImage(path, cache_size=cache_size) as image:
+    print(
+        f"checking reading larger than {sizeof_fmt(raw_cache_size)} cache size: ",
+        end="",
+    )
+    try:
+        data = image.read(read_size)
+        data_size = len(data)
+        if data_size != read_size:
+            raise ValueError(
+                f"data returned is not {sizeof_fmt(read_size)}: {sizeof_fmt(data_size)}"
+            )
+
+        print("pass")
+
+    except ValueError as e:
+        FAILED = True
+        print("fail")
+        print("  ", end="")
+        print(e)
 
 image = UpdateImage(".venv/2.15.1.1189_reMarkable2-wVbHkgKisg-.signed")
 volume = ext4.Volume(image)
@@ -394,6 +426,7 @@ assert_raw_byte(0x00100001, b"\x81")
 assert_raw_byte(0x00100002, b"\x00")
 
 image.close()
+
 
 if FAILED:
     sys.exit(1)

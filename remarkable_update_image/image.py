@@ -49,6 +49,9 @@ class BlockCache(TTLCache):
     def max_size_str(self):
         return sizeof_fmt(self.maxsize)
 
+    def will_fit(self, value) -> bool:
+        return self.maxsize >= self.getsizeof(value)
+
 
 class UpdateImageException(Exception):
     pass
@@ -170,11 +173,8 @@ class ProtobufUpdateImage(io.RawIOBase):
                     f"Error: Bz2 compressed data was the wrong length {len(blob_data)}"
                 )
 
-        try:
+        if self._cache.will_fit(blob_data):
             self._cache[blob_offset] = blob_data
-        except ValueError as err:
-            if str(err) != "value too large":
-                raise err
 
         return blob_data
 
@@ -375,7 +375,10 @@ class CPIOUpdateImage(io.RawIOBase):
         if key in self._cache:
             return self._cache[key]
 
-        self._cache[key] = data = self._image.read(size)
+        data = self._image.read(size)
+        if self._cache.will_fit(data):
+            self._cache[key] = data
+
         return data
 
     def peek(self, size=0):
@@ -383,7 +386,10 @@ class CPIOUpdateImage(io.RawIOBase):
         if key in self._cache:
             return self._cache[key]
 
-        self._cache[key] = data = self._image.peek(size)
+        data = self._image.peek(size)
+        if self._cache.will_fit(data):
+            self._cache[key] = data
+
         return data
 
 
