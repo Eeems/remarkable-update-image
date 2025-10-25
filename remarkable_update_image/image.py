@@ -211,7 +211,7 @@ class ProtobufUpdateImage(io.RawIOBase):
         elif whence == os.SEEK_CUR:
             self._pos = min(max(self._pos + offset, 0), self._size)
         elif whence == os.SEEK_END:
-            self._pos = min(max(self._pos + offset + self._size, 0), self._size)
+            self._pos = min(max(self._size + offset, 0), self._size)
         return self._pos
 
     def tell(self):
@@ -360,7 +360,7 @@ class CPIOUpdateImage(io.RawIOBase):
             self._archive.close()
 
         finally:
-            return super().close()
+            super().close()
 
     def writable(self):
         return False
