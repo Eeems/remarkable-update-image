@@ -306,6 +306,9 @@ class CPIOUpdateImage(io.RawIOBase):
         elif "ferrari" in info:
             self._info = info["ferrari"]
 
+        elif "chiappa" in info:
+            self._info = info["chiappa"]
+
         else:
             raise UpdateImageException("Unsupported swupdate file")
 
