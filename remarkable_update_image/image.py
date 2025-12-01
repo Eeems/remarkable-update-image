@@ -123,17 +123,6 @@ class ProtobufUpdateImage(io.RawIOBase):
         return None
 
     @property
-    def version(self) -> str | None:
-        return None
-
-    @property
-    def hardware_type(self) -> str | None:
-        return None
-
-    def __getitem__(self, key):
-        raise NotImplementedError("Protobuf format does not support file access")
-
-    @property
     def _signatures(self):
         with open(self.update_file, "rb") as f:
             f.seek(self._offset + self._manifest.signatures_offset)
@@ -372,8 +361,9 @@ class CPIOUpdateImage(io.RawIOBase):
     def hardware_type(self) -> str:
         return self._hardware_type
 
-    def __getitem__(self, key):
-        return self._archive[key]
+    @property
+    def archive(self):
+        return self._archive
 
     @property
     def cache(self):
