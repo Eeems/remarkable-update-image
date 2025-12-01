@@ -117,8 +117,22 @@ def assert_ls(path, expected):
         print(f"  {diff}")
 
 
+def assert_version(img, expected):
+    global FAILED
+    print(f"checking version is {expected!r}: ", end="")
+    actual = img.version
+    if actual == expected:
+        print("pass")
+        return
+
+    print("fail")
+    FAILED = True
+    print(f"  Error: version is {actual!r}")
+
+
 path = ".venv/remarkable-production-memfault-image-3.11.3.3-remarkable1-public"
 image = UpdateImage(path)
+assert_version(image, "3.11.3.3")
 volume = ext4.Volume(image)
 assert_ls(
     "/",
@@ -270,6 +284,7 @@ with UpdateImage(path, cache_size=cache_size) as image:
         print(e)
 
 image = UpdateImage(".venv/2.15.1.1189_reMarkable2-wVbHkgKisg-.signed")
+assert_version(image, None)
 volume = ext4.Volume(image)
 print(f"validating {volume.uuid}: ", end="")
 try:
@@ -422,6 +437,7 @@ image.close()
 
 path = ".venv/remarkable-production-memfault-image-3.20.0.92-rmpp-public"
 image = UpdateImage(path)
+assert_version(image, "3.20.0.92")
 print("checking writing full cpio image to file: ", end="")
 try:
     image.seek(0, os.SEEK_SET)

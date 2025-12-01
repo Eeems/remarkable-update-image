@@ -365,7 +365,7 @@ class CPIOUpdateImage(io.RawIOBase):
         return None
 
     @property
-    def version(self) -> str:
+    def version(self) -> str | None:
         return self._version
 
     @property
