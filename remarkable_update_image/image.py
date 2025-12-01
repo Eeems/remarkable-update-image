@@ -123,6 +123,17 @@ class ProtobufUpdateImage(io.RawIOBase):
         return None
 
     @property
+    def version(self) -> str | None:
+        return None
+
+    @property
+    def hardware_type(self) -> str | None:
+        return None
+
+    def __getitem__(self, key):
+        raise NotImplementedError("Protobuf format does not support file access")
+
+    @property
     def _signatures(self):
         with open(self.update_file, "rb") as f:
             f.seek(self._offset + self._manifest.signatures_offset)
@@ -297,16 +308,22 @@ class CPIOUpdateImage(io.RawIOBase):
         info = libconf.loads(self._archive["sw-description"].read().decode("utf-8"))[
             "software"
         ]
+        self._version = info.get("version")
+
         if "reMarkable1" in info:
+            self._hardware_type = "reMarkable1"
             self._info = info["reMarkable1"]
 
         elif "reMarkable2" in info:
+            self._hardware_type = "reMarkable2"
             self._info = info["reMarkable2"]
 
         elif "ferrari" in info:
+            self._hardware_type = "ferrari"
             self._info = info["ferrari"]
 
         elif "chiappa" in info:
+            self._hardware_type = "chiappa"
             self._info = info["chiappa"]
 
         else:
@@ -346,6 +363,17 @@ class CPIOUpdateImage(io.RawIOBase):
     def signature(self):
         # TODO - get from entry
         return None
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    @property
+    def hardware_type(self) -> str:
+        return self._hardware_type
+
+    def __getitem__(self, key):
+        return self._archive[key]
 
     @property
     def cache(self):
