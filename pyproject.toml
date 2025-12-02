@@ -5,11 +5,11 @@ authors = [
   { name="Eeems", email="eeems@eeems.email" },
 ]
 description = "Read reMarkable update images"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 license-files=["LICENSE"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Operating System :: POSIX :: Linux",
@@ -17,6 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: System :: Filesystems",
     "Topic :: Utilities",
 ]
@@ -28,9 +29,7 @@ Repository = "https://github.com/Eeems/remarkable-update-image.git"
 Issues = "https://github.com/Eeems/remarkable-update-image/issues"
 
 [tool.setuptools]
-packages = [
-    "remarkable_update_image",
-]
+packages = ["remarkable_update_image"]
 [tool.setuptools.package-data]
 remarkable_update_image = ['update_metadata.proto']
 
