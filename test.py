@@ -13,6 +13,8 @@ from hashlib import sha256
 from remarkable_update_image import UpdateImage
 from remarkable_update_image import UpdateImageSignatureException
 from remarkable_update_image.image import sizeof_fmt
+from remarkable_update_image.image import ProtobufUpdateImage
+from remarkable_update_image.image import CPIOUpdateImage
 
 FAILED = False
 
@@ -117,8 +119,57 @@ def assert_ls(path, expected):
         print(f"  {diff}")
 
 
+def assert_image_type(img, expected_type):
+    global FAILED
+    print(f"checking image is {expected_type.__name__}: ", end="")
+    if isinstance(img, expected_type):
+        print("pass")
+        return
+    print("fail")
+    FAILED = True
+    print(f"  Error: image is {type(img).__name__}")
+
+
+def assert_attr(obj, attr, expected):
+    global FAILED
+    print(f"checking {attr} is {expected!r}: ", end="")
+    actual = getattr(obj, attr)
+    if actual == expected:
+        print("pass")
+        return
+    print("fail")
+    FAILED = True
+    print(f"  Error: {attr} is {actual!r}")
+
+
+def assert_no_attr(obj, attr):
+    global FAILED
+    print(f"checking {attr} attribute does not exist: ", end="")
+    if not hasattr(obj, attr):
+        print("pass")
+        return
+    print("fail")
+    FAILED = True
+    print(f"  Error: {attr} attribute exists with value {getattr(obj, attr)!r}")
+
+
+def assert_in_archive(img, key):
+    global FAILED
+    print(f"checking archive contains {key}: ", end="")
+    if key.encode() in img.archive.keys():
+        print("pass")
+        return
+    print("fail")
+    FAILED = True
+    print(f"  Error: {key} not in archive")
+
+
 path = ".venv/remarkable-production-memfault-image-3.11.3.3-remarkable1-public"
 image = UpdateImage(path)
+assert_image_type(image, CPIOUpdateImage)
+assert_attr(image, "version", "3.11.3.3")
+assert_attr(image, "hardware_type", "reMarkable1")
+assert_in_archive(image, "sw-description")
 volume = ext4.Volume(image)
 assert_ls(
     "/",
@@ -270,6 +321,8 @@ with UpdateImage(path, cache_size=cache_size) as image:
         print(e)
 
 image = UpdateImage(".venv/2.15.1.1189_reMarkable2-wVbHkgKisg-.signed")
+assert_image_type(image, ProtobufUpdateImage)
+assert_no_attr(image, "version")
 volume = ext4.Volume(image)
 print(f"validating {volume.uuid}: ", end="")
 try:
@@ -422,6 +475,10 @@ image.close()
 
 path = ".venv/remarkable-production-memfault-image-3.20.0.92-rmpp-public"
 image = UpdateImage(path)
+assert_image_type(image, CPIOUpdateImage)
+assert_attr(image, "version", "3.20.0.92")
+assert_attr(image, "hardware_type", "ferrari")
+assert_in_archive(image, "sw-description")
 print("checking writing full cpio image to file: ", end="")
 try:
     image.seek(0, os.SEEK_SET)
