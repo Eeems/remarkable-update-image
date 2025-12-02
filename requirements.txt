@@ -1,5 +1,5 @@
-cryptography==44.0.1
+cryptography==46.0.3
 protobuf==5.29.5
-ext4==1.1.0
+ext4==1.2
 libconf==2.0.1
-indexed-gzip==1.8.7
+indexed-gzip==1.10.1

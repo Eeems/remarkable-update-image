@@ -65,6 +65,7 @@ def assert_exists(path):
     try:
         volume.inode_at(path)
         print("pass")
+
     except FileNotFoundError:
         print("fail")
         FAILED = True
@@ -125,6 +126,7 @@ def assert_image_type(img, expected_type):
     if isinstance(img, expected_type):
         print("pass")
         return
+
     print("fail")
     FAILED = True
     print(f"  Error: image is {type(img).__name__}")
@@ -137,6 +139,7 @@ def assert_attr(obj, attr, expected):
     if actual == expected:
         print("pass")
         return
+
     print("fail")
     FAILED = True
     print(f"  Error: {attr} is {actual!r}")
@@ -148,6 +151,7 @@ def assert_no_attr(obj, attr):
     if not hasattr(obj, attr):
         print("pass")
         return
+
     print("fail")
     FAILED = True
     print(f"  Error: {attr} attribute exists with value {getattr(obj, attr)!r}")
@@ -159,6 +163,7 @@ def assert_in_archive(img, key):
     if key.encode() in img.archive.keys():
         print("pass")
         return
+
     print("fail")
     FAILED = True
     print(f"  Error: {key} not in archive")
@@ -341,6 +346,7 @@ try:
         .read()
     )
     print("pass")
+
 except UpdateImageSignatureException:
     print("fail")
 
