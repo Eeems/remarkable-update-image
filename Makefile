@@ -1,8 +1,8 @@
 .DEFAULT_GOAL := all
 VERSION := $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
 PACKAGE := $(shell grep -m 1 name pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
-RM2_FW_VERSION := 2.15.1.1189
-RM2_FW_DATA := wVbHkgKisg-
+RM2_FW_VERSION := 2.13.0.758
+RM2_FW_DATA := 2N5B5nvpZ4-
 RM1_FW_VERSION=3.11.3.3
 RMPP_FW_VERSION=3.20.0.92
 
@@ -12,8 +12,8 @@ ifeq ($(OS),Windows_NT)
 	ifeq ($(VENV_BIN_ACTIVATE),)
 		VENV_BIN_ACTIVATE := .venv/Scripts/activate
 	endif
-	CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1752948641/windows-latest.zip
-	CODEXCTL_HASH := a3c2164e8ec4f04bf059dfcd1cc216e5911f24e37ce236c25a8b420421d3266a
+	CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1765093380/windows-latest.zip
+	CODEXCTL_HASH := 5d9b2bb323a33c7f5616aee36940df7c163f43bc81c6b1ff7bcd3aa3c9c489d6
 	CODEXCTL_BIN := codexctl.exe
 else
 	ifeq ($(VENV_BIN_ACTIVATE),)
@@ -21,11 +21,11 @@ else
 	endif
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
-		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1752948641/macos-latest.zip
-		CODEXCTL_HASH := 34da200b09bba09c92a7b0c39ec5dfc6b0fa5d303a750da5a1c60d715d5016e4
+		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1765093380/macos-latest.zip
+		CODEXCTL_HASH := 7e530f5f0995f9778e591ed22a314494885a7cfcfd26aa655fbabf2ae960c5de
 	else
-		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1752948641/ubuntu-latest.zip
-		CODEXCTL_HASH := 209d192788576eb9d631cff8d69702ccf67bc3be07573b0adfe0ea3dc32d0227
+		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1765093380/ubuntu-latest.zip
+		CODEXCTL_HASH := 9cf5b27e95e7cc1a961e41e26c8b71cd38f77fad38f819fdfced2ee1f3e2ebd3
 	endif
 	CODEXCTL_BIN := codexctl
 endif
@@ -110,17 +110,20 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	unzip -n .venv/codexctl.zip -d .venv/bin
 	chmod +x .venv/bin/${CODEXCTL_BIN}
 
-IMAGES := .venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed
-.venv/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable2 --out .venv ${RM2_FW_VERSION}
+.data:
+	mkdir .data
 
-IMAGES += .venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public
-.venv/remarkable-production-memfault-image-${RM1_FW_VERSION}-remarkable1-public: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --hardware remarkable1 --out .venv ${RM1_FW_VERSION}
+IMAGES := .data/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed
+.data/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN} .data
+	.venv/bin/${CODEXCTL_BIN} download --hardware rm2 --out .data ${RM2_FW_VERSION}
 
-IMAGES += .venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public
-.venv/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .venv/bin/${CODEXCTL_BIN}
-	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .venv ${RMPP_FW_VERSION}
+IMAGES += .data/remarkable-production-memfault-image-${RM1_FW_VERSION}-rm1-public
+.data/remarkable-production-memfault-image-${RM1_FW_VERSION}-rm1-public: .venv/bin/${CODEXCTL_BIN} .data
+	.venv/bin/${CODEXCTL_BIN} download --hardware rm1 --out .data ${RM1_FW_VERSION}
+
+IMAGES += .data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public
+.data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .venv/bin/${CODEXCTL_BIN} .data
+	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .data ${RMPP_FW_VERSION}
 
 $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	. ${VENV_BIN_ACTIVATE}; \

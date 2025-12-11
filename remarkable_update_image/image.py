@@ -170,9 +170,14 @@ class ProtobufUpdateImage(io.RawIOBase):
 
             if blob_length - len(blob_data) < 0:
                 raise UpdateImageException(
-                    f"Error: Bz2 compressed data was the wrong length {len(blob_data)}"
+                    f"Error: Bz2 compressed data was too large {len(blob_data)}"
                 )
 
+        # Zero padd data to fit
+        if len(blob_data) < blob_length:
+            blob_data += b"\0" * (blob_length - len(blob_data))
+
+        assert len(blob_data) == blob_length
         if self._cache.will_fit(blob_data):
             self._cache[blob_offset] = blob_data
 
@@ -254,6 +259,14 @@ class ProtobufUpdateImage(io.RawIOBase):
             )
             assert blob_end_offset - blob_start_offset == len(data), (
                 f"blob start and end is larger than data: {blob_end_offset - blob_start_offset}, {len(data)}"
+                + f"\n  offset: {offset}"
+                + f"\n  blob_offset: {blob_offset}"
+                + f"\n  size: {size}"
+                + f"\n  blob_length: {blob_length}"
+                + f"\n  blob_start_offset: {blob_start_offset}"
+                + f"\n  blob_end_offset: {blob_end_offset}"
+                + f"\n  len(blob_data): {len(blob_data)}"
+                + f"\n  blob.type: {blob.type}"
             )
 
             start_offset = blob_offset + blob_start_offset - offset

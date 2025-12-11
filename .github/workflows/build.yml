@@ -59,9 +59,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            .venv/bin/codexctl.*
-            .venv/*_reMarkable2-*.signed
-            .venv/remarkable-production-memfault-image-*-public
+            .venv/bin/codexctl*
+            .data/**
           key: test-files-${{ hashFiles('Makefile') }}
       - name: Run tests
         shell: bash
