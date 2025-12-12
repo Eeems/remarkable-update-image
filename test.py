@@ -41,7 +41,7 @@ def assert_byte(offset, byte):
 
 def assert_raw_byte(offset, byte):
     global FAILED
-    image.seek(offset)
+    _ = image.seek(offset)
     data = image.read(1)
     print(f"checking raw offset {offset:08X} is {to_hex(byte)}: ", end="")
     if len(data) != 1:
@@ -63,7 +63,7 @@ def assert_exists(path):
     global FAILED
     print(f"checking that {path} exists: ", end="")
     try:
-        volume.inode_at(path)
+        _ = volume.inode_at(path)
         print("pass")
 
     except FileNotFoundError:
@@ -169,13 +169,25 @@ def assert_in_archive(img, key):
     print(f"  Error: {key} not in archive")
 
 
-path = ".venv/remarkable-production-memfault-image-3.11.3.3-remarkable1-public"
+path = ".data/remarkable-production-memfault-image-3.11.3.3-rm1-public"
 image = UpdateImage(path)
 assert_image_type(image, CPIOUpdateImage)
 assert_attr(image, "version", "3.11.3.3")
 assert_attr(image, "hardware_type", "reMarkable1")
 assert_in_archive(image, "sw-description")
 volume = ext4.Volume(image)
+print(f"validating root inode {volume.uuid}: ", end="")
+try:
+    volume.root.validate()
+    print("pass")
+
+except ChecksumError:
+    print("fail")
+    print(
+        f"  {volume.root.checksum} != {volume.root.expected_checksum} {volume.root.fits_in_hi}"
+    )
+    FAILED = True
+
 assert_ls(
     "/",
     [
@@ -325,17 +337,20 @@ with UpdateImage(path, cache_size=cache_size) as image:
         print("  ", end="")
         print(e)
 
-image = UpdateImage(".venv/2.15.1.1189_reMarkable2-wVbHkgKisg-.signed")
+image = UpdateImage(".data/2.13.0.758_reMarkable2-2N5B5nvpZ4-.signed")
 assert_image_type(image, ProtobufUpdateImage)
 assert_no_attr(image, "version")
 volume = ext4.Volume(image)
-print(f"validating {volume.uuid}: ", end="")
+print(f"validating root inode {volume.uuid}: ", end="")
 try:
     volume.root.validate()
     print("pass")
 
 except ChecksumError:
     print("fail")
+    print(
+        f"  {volume.root.checksum} != {volume.root.expected_checksum} {volume.root.fits_in_hi}"
+    )
     FAILED = True
 
 print("checking image signature: ", end="")
@@ -350,9 +365,8 @@ try:
 except UpdateImageSignatureException:
     print("fail")
 
-print("checking block count is 278272: ", end="")
-# If you remove the actual overhead it should actually be 276480
-if volume.superblock.s_blocks_count != 278272:
+print("checking block count is 261888: ", end="")
+if volume.superblock.s_blocks_count != 261888:
     print("fail")
     print(f"  Error: {volume.superblock.s_blocks_count}")
     FAILED = True
@@ -360,8 +374,8 @@ if volume.superblock.s_blocks_count != 278272:
 else:
     print("pass")
 
-print("checking free block count is 54420: ", end="")
-if volume.superblock.s_free_blocks_count != 54420:
+print("checking free block count is 38220: ", end="")
+if volume.superblock.s_free_blocks_count != 38220:
     print("fail")
     print(f"  Error: {volume.superblock.s_free_blocks_count}")
     FAILED = True
@@ -369,8 +383,8 @@ if volume.superblock.s_free_blocks_count != 54420:
 else:
     print("pass")
 
-print("checking inode count is 34816: ", end="")
-if volume.superblock.s_inodes_count != 34816:
+print("checking inode count is 65024: ", end="")
+if volume.superblock.s_inodes_count != 65024:
     print("fail")
     print(f"  Error: {volume.superblock.s_inodes_count}")
     FAILED = True
@@ -378,8 +392,8 @@ if volume.superblock.s_inodes_count != 34816:
 else:
     print("pass")
 
-print("checking free inode count is 26136: ", end="")
-if volume.superblock.s_free_inodes_count != 26136:
+print("checking free inode count is 56414: ", end="")
+if volume.superblock.s_free_inodes_count != 56414:
     print("fail")
     print(f"  Error: {volume.superblock.s_free_inodes_count}")
     FAILED = True
@@ -402,8 +416,8 @@ assert_byte(0x000BC000, b"\x54")
 assert_exists("/bin/bash.bash")
 assert_exists("/uboot-version")
 assert_exists("/home/root")
-assert_hash("f33ff883cb5c36aa7ec7f5f4c1e24133", "/uboot-version")
-assert_hash("68f0a9db4c3cfce9e96c82250587fe1b", "/bin/bash.bash")
+assert_hash("21442141a3b145d11763862fcbecc40a", "/uboot-version")
+assert_hash("233a2dc8f0ab70fbd956b036438adefb", "/bin/bash.bash")
 assert_hash(
     "6a67b9873c57fbb8589ef4a4f744beb3",
     "/usr/share/update_engine/update-payload-key.pub.pem",
@@ -438,7 +452,7 @@ assert_symlink_to("/bin/ash", b"/bin/busybox.nosuid")
 
 print("checking path that contains file raises ENOTDIR: ", end="")
 try:
-    volume.inode_at("/uboot-version/test")
+    _ = volume.inode_at("/uboot-version/test")
     print("fail")
     print("  No error raised")
     FAILED = True
@@ -450,15 +464,17 @@ except OSError as e:
     else:
         print("fail")
         FAILED = True
-        print(f"  Unexpected error: {os.strerror(e)}")
+        print(
+            f"  Unexpected error: {os.strerror(e.errno) if e.errno is not None else e}"
+        )
 
 
 print("checking writing full protobuf image to file: ", end="")
 try:
-    image.seek(0, os.SEEK_SET)
+    _ = image.seek(0, os.SEEK_SET)
     with TemporaryFile(mode="wb") as f:
         digest = sha256(image.peek()).hexdigest()
-        if "fc7d145e18f14a1a3f435f2fd5ca5924fe8dfe59bf45605dc540deed59551ae4" != digest:
+        if "ca65563b992e6d38e539f0a837416b8078903d7490d63aa9f6a059e431918d88" != digest:
             raise Exception(f"Incorrect digest: {digest}")
 
         _ = f.write(image.read())
@@ -472,22 +488,35 @@ except Exception as e:
     print(e)
 
 # Make sure we aren't reading zeros in the raw image where there should be data
-assert_raw_byte(0x00100000, b"\xa4")
-assert_raw_byte(0x00100001, b"\x81")
+assert_raw_byte(0x00100000, b"\xed")
+assert_raw_byte(0x00100001, b"\x41")
 assert_raw_byte(0x00100002, b"\x00")
 
 image.close()
 
 
-path = ".venv/remarkable-production-memfault-image-3.20.0.92-rmpp-public"
+path = ".data/remarkable-production-memfault-image-3.20.0.92-rmpp-public"
 image = UpdateImage(path)
 assert_image_type(image, CPIOUpdateImage)
 assert_attr(image, "version", "3.20.0.92")
 assert_attr(image, "hardware_type", "ferrari")
 assert_in_archive(image, "sw-description")
+volume = ext4.Volume(image)
+print(f"validating root inode {volume.uuid}: ", end="")
+try:
+    volume.root.validate()
+    print("pass")
+
+except ChecksumError:
+    print("fail")
+    print(
+        f"  {volume.root.checksum} != {volume.root.expected_checksum} {volume.root.fits_in_hi}"
+    )
+    FAILED = True
+
 print("checking writing full cpio image to file: ", end="")
 try:
-    image.seek(0, os.SEEK_SET)
+    _ = image.seek(0, os.SEEK_SET)
     with TemporaryFile(mode="wb") as f:
         digest = sha256(image.peek()).hexdigest()
         if "e8eec783c885df92d05dd53ba454949b6f0e5bd793038013df092786b54d6d5d" != digest:

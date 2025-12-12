@@ -37,6 +37,7 @@ Dependencies:
 - python-pipx
 - python-venv
 - python-wheel
+- python-setuptools
 
 ```bash
 make # Build wheel and sdist packages in dist/
