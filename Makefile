@@ -109,6 +109,7 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	    rm .data/codexctl.zip; \
 	    exit 1; \
 	fi'
+	rm -f .data/${CODEXCTL_BIN}
 
 .data/${CODEXCTL_BIN}: .data/codexctl.zip
 	unzip -n .data/codexctl.zip -d .data
