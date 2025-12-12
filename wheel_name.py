@@ -1,37 +1,63 @@
 import sys
 import json
 
-from setuptools.command.bdist_wheel import get_platform
+
+def get_platform() -> str:
+    import platform
+
+    if platform.system() != "Darwin":
+        from setuptools.command.bdist_wheel import get_platform  # pyright: ignore[reportMissingModuleSource]
+
+        return get_platform(None)
+
+    arch = platform.machine()
+    if arch == "arm64":
+        return f"macosx-11.0-{arch}"
+
+    return f"macosx-10.13-{arch}"
 
 
-def get_abi():
+def get_arch() -> str:
+    import platform
+
+    return platform.machine()
+
+
+def get_abi() -> str:
     try:
-        from wheel.pep425tags import get_abi_tag
+        from wheel.pep425tags import get_abi_tag  # pyright: ignore[reportMissingImports, reportUnknownVariableType]
 
-        return get_abi_tag()
+        return get_abi_tag()  # pyright: ignore[reportUnknownVariableType]
+
     except ModuleNotFoundError:
         pass
 
     try:
-        from wheel.vendored.packaging import tags
+        from wheel.vendored.packaging import tags  # pyright: ignore[reportMissingImports, reportUnknownVariableType]
+
     except ModuleNotFoundError:
         from packaging import tags
 
-    name = tags.interpreter_name()
-    version = tags.interpreter_version()
-    return f"{name}{version}"
+    return f"{tags.interpreter_name()}{tags.interpreter_version()}"  # pyright: ignore[reportUnknownMemberType]
 
 
-platform = get_platform(None)
-abi = get_abi()
-with open("pyproject.toml", "r") as f:
-    lines = f.read().splitlines()
+match sys.argv[-1]:
+    case "--platform":
+        _ = sys.stdout.write(get_platform())
 
-package = json.loads(
-    [x for x in lines if x.startswith("name = ")][0].split("=")[1].strip()
-)
-version = json.loads(
-    [x for x in lines if x.startswith("version = ")][0].split("=")[1].strip()
-)
+    case "--archflags":
+        _ = sys.stdout.write(f"-arch {get_arch()}")
 
-sys.stdout.write(f"{package}-{version}-{abi}-{abi}-{platform}.whl")
+    case _:
+        with open("pyproject.toml", "r") as f:
+            lines = f.read().splitlines()
+
+        package = json.loads(  # pyright: ignore[reportAny]
+            [x for x in lines if x.startswith("name = ")][0].split("=")[1].strip()
+        )
+        version = json.loads(  # pyright: ignore[reportAny]
+            [x for x in lines if x.startswith("version = ")][0].split("=")[1].strip()
+        )
+        platform = get_platform().replace(".", "_").replace("-", "_")
+        abi = get_abi()
+        _ = sys.stdout.write(f"{package}-{version}-{abi}-{abi}-{platform}.whl")

@@ -48,6 +48,8 @@ PYTHON := python
 endif
 
 WHEEL_NAME := $(shell python wheel_name.py)
+_PYTHON_HOST_PLATFORM := $(shell python wheel_name.py --platform)
+ARCHFLAGS := $(shell python wheel_name.py --archflags)
 
 clean:
 	if [ -d .venv/mnt ] && mountpoint -q .venv/mnt; then \
@@ -86,7 +88,9 @@ dist/${PACKAGE}-${VERSION}.tar.gz: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 
 dist/${WHEEL_NAME}: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
-	python -m build --wheel -C="--build-option=bdist_wheel"
+	_PYTHON_HOST_PLATFORM="${_PYTHON_HOST_PLATFORM}" \
+	ARCHFLAGS="${ARCHFLAGS}" \
+	python -m build --wheel
 	if ! [ -f "dist/${WHEEL_NAME}" ]; then \
 	  echo "${WHEEL_NAME} Missing!"; \
 	  exit 1; \
