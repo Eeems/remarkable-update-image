@@ -176,6 +176,18 @@ assert_attr(image, "version", "3.11.3.3")
 assert_attr(image, "hardware_type", "reMarkable1")
 assert_in_archive(image, "sw-description")
 volume = ext4.Volume(image)
+print(f"validating root inode {volume.uuid}: ", end="")
+try:
+    volume.root.validate()
+    print("pass")
+
+except ChecksumError:
+    print("fail")
+    print(
+        f"  {volume.root.checksum} != {volume.root.expected_checksum} {volume.root.fits_in_hi}"
+    )
+    FAILED = True
+
 assert_ls(
     "/",
     [
@@ -329,13 +341,16 @@ image = UpdateImage(".data/2.13.0.758_reMarkable2-2N5B5nvpZ4-.signed")
 assert_image_type(image, ProtobufUpdateImage)
 assert_no_attr(image, "version")
 volume = ext4.Volume(image)
-print(f"validating {volume.uuid}: ", end="")
+print(f"validating root inode {volume.uuid}: ", end="")
 try:
     volume.root.validate()
     print("pass")
 
 except ChecksumError:
     print("fail")
+    print(
+        f"  {volume.root.checksum} != {volume.root.expected_checksum} {volume.root.fits_in_hi}"
+    )
     FAILED = True
 
 print("checking image signature: ", end="")
@@ -484,6 +499,19 @@ assert_image_type(image, CPIOUpdateImage)
 assert_attr(image, "version", "3.20.0.92")
 assert_attr(image, "hardware_type", "ferrari")
 assert_in_archive(image, "sw-description")
+volume = ext4.Volume(image)
+print(f"validating root inode {volume.uuid}: ", end="")
+try:
+    volume.root.validate()
+    print("pass")
+
+except ChecksumError:
+    print("fail")
+    print(
+        f"  {volume.root.checksum} != {volume.root.expected_checksum} {volume.root.fits_in_hi}"
+    )
+    FAILED = True
+
 print("checking writing full cpio image to file: ", end="")
 try:
     _ = image.seek(0, os.SEEK_SET)
