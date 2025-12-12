@@ -464,7 +464,9 @@ except OSError as e:
     else:
         print("fail")
         FAILED = True
-        print(f"  Unexpected error: {os.strerror(e)}")
+        print(
+            f"  Unexpected error: {os.strerror(e.errno) if e.errno is not None else e}"
+        )
 
 
 print("checking writing full protobuf image to file: ", end="")

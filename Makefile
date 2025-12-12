@@ -102,7 +102,7 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	    -r requirements.txt
 
 
-.data/codexctl.zip: ${VENV_BIN_ACTIVATE}
+.data/codexctl.zip: ${VENV_BIN_ACTIVATE} .data
 	curl -L "${CODEXCTL}" -o .data/codexctl.zip
 	@bash -c 'if ! sha256sum -c <(echo "${CODEXCTL_HASH} .data/codexctl.zip"); then \
 	    echo "Hash mismatch, removing invalid codexctl.zip"; \
