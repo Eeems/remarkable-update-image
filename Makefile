@@ -86,8 +86,8 @@ dist/${PACKAGE}-${VERSION}.tar.gz: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 
 dist/${WHEEL_NAME}: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
-	python -m build --wheel
-	if ! [ -f "${WHEEL_NAME}" ]; then \
+	python -m build --wheel -C="--build-option=bdist_wheel"
+	if ! [ -f "dist/${WHEEL_NAME}" ]; then \
 	  echo "${WHEEL_NAME} Missing!"; \
 	  exit 1; \
 	fi
