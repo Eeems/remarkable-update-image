@@ -22,7 +22,7 @@ def get_abi():
     return f"{name}{version}"
 
 
-platform = get_platform(".")
+platform = get_platform(None)
 abi = get_abi()
 with open("pyproject.toml", "r") as f:
     lines = f.read().splitlines()

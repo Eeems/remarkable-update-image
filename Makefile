@@ -102,32 +102,32 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	    -r requirements.txt
 
 
-.venv/codexctl.zip: ${VENV_BIN_ACTIVATE}
-	curl -L "${CODEXCTL}" -o .venv/codexctl.zip
-	@bash -c 'if ! sha256sum -c <(echo "${CODEXCTL_HASH} .venv/codexctl.zip"); then \
+.data/codexctl.zip: ${VENV_BIN_ACTIVATE}
+	curl -L "${CODEXCTL}" -o .data/codexctl.zip
+	@bash -c 'if ! sha256sum -c <(echo "${CODEXCTL_HASH} .data/codexctl.zip"); then \
 	    echo "Hash mismatch, removing invalid codexctl.zip"; \
-	    rm .venv/codexctl.zip; \
+	    rm .data/codexctl.zip; \
 	    exit 1; \
 	fi'
 
-.venv/bin/${CODEXCTL_BIN}: .venv/codexctl.zip
-	unzip -n .venv/codexctl.zip -d .venv/bin
-	chmod +x .venv/bin/${CODEXCTL_BIN}
+.data/${CODEXCTL_BIN}: .data/codexctl.zip
+	unzip -n .data/codexctl.zip -d .data
+	chmod +x .data/${CODEXCTL_BIN}
 
 .data:
 	mkdir .data
 
 IMAGES := .data/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed
-.data/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed: .venv/bin/${CODEXCTL_BIN} .data
-	.venv/bin/${CODEXCTL_BIN} download --hardware rm2 --out .data ${RM2_FW_VERSION}
+.data/${RM2_FW_VERSION}_reMarkable2-${RM2_FW_DATA}.signed: .data/${CODEXCTL_BIN} .data
+	.data/${CODEXCTL_BIN} download --hardware rm2 --out .data ${RM2_FW_VERSION}
 
 IMAGES += .data/remarkable-production-memfault-image-${RM1_FW_VERSION}-rm1-public
-.data/remarkable-production-memfault-image-${RM1_FW_VERSION}-rm1-public: .venv/bin/${CODEXCTL_BIN} .data
-	.venv/bin/${CODEXCTL_BIN} download --hardware rm1 --out .data ${RM1_FW_VERSION}
+.data/remarkable-production-memfault-image-${RM1_FW_VERSION}-rm1-public: .data/${CODEXCTL_BIN} .data
+	.data/${CODEXCTL_BIN} download --hardware rm1 --out .data ${RM1_FW_VERSION}
 
 IMAGES += .data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public
-.data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .venv/bin/${CODEXCTL_BIN} .data
-	.venv/bin/${CODEXCTL_BIN} download --hardware rmpp --out .data ${RMPP_FW_VERSION}
+.data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .data/${CODEXCTL_BIN} .data
+	.data/${CODEXCTL_BIN} download --hardware rmpp --out .data ${RMPP_FW_VERSION}
 
 $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	. ${VENV_BIN_ACTIVATE}; \
