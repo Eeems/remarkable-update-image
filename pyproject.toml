@@ -30,6 +30,7 @@ Issues = "https://github.com/Eeems/remarkable-update-image/issues"
 
 [tool.setuptools]
 packages = ["remarkable_update_image"]
+
 [tool.setuptools.package-data]
 remarkable_update_image = ['update_metadata.proto']
 

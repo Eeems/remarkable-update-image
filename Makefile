@@ -87,6 +87,10 @@ dist/${PACKAGE}-${VERSION}.tar.gz: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 dist/${WHEEL_NAME}: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -m build --wheel
+	if ! [ -f "${WHEEL_NAME}" ]; then \
+	  echo "${WHEEL_NAME} Missing!"; \
+	  exit 1; \
+	fi
 
 ${VENV_BIN_ACTIVATE}: requirements.txt
 	@echo "Setting up development virtual env in .venv"
