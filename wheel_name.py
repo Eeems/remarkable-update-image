@@ -1,7 +1,7 @@
 import sys
 import json
 
-from sysconfig import get_platform
+from setuptools.command.bdist_wheel import get_platform
 
 
 def get_abi():
@@ -22,7 +22,7 @@ def get_abi():
     return f"{name}{version}"
 
 
-platform = get_platform().replace("-", "_")
+platform = get_platform(".")
 abi = get_abi()
 with open("pyproject.toml", "r") as f:
     lines = f.read().splitlines()

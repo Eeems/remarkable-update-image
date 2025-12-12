@@ -54,7 +54,7 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: "pip"
       - name: Install wheel
-        run: pip install wheel
+        run: pip install wheel setuptools
       - name: Cache test files
         uses: actions/cache@v4
         with:
@@ -94,7 +94,7 @@ jobs:
           cache: "pip"
       - name: Install wheel
         if: matrix.os != 'ubuntu'
-        run: pip install wheel
+        run: pip install wheel setuptools
       - name: Install coreutils and ccache for macOS
         if: matrix.os == 'macos'
         run: brew install coreutils ccache
@@ -147,7 +147,7 @@ jobs:
           python-version: "3.11"
           cache: "pip"
       - name: Install wheel
-        run: pip install wheel
+        run: pip install wheel setuptools
       - name: Building package
         shell: bash
         run: make ${{ env.FLAGS }} sdist
