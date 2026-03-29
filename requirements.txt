@@ -1,4 +1,4 @@
-cryptography==46.0.5
+cryptography==46.0.6
 protobuf==5.29.6
 ext4==1.2.4
 libconf==2.0.1
