@@ -82,7 +82,7 @@ install: wheel
 .PHONY: sdist
 sdist: dist/${PACKAGE}-${VERSION}.tar.gz
 
-.PHONY: wheel
+.PHONY: native-wheel
 native-wheel: dist/${WHEEL_NAME}
 
 .PHONY: wheel
