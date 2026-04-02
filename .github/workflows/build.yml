@@ -120,7 +120,7 @@ jobs:
           cd /src;
           export PATH=\$PATH:/opt/python/$python_version-$python_version/bin;
           pip install "setuptools>=80";
-          make ${{ env.FLAGS }} wheel;
+          make ${{ env.FLAGS }} native-wheel;
           auditwheel repair dist/*.whl;
           EOF
           )
