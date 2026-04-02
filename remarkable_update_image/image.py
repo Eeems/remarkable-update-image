@@ -4,21 +4,21 @@ import os
 import struct
 import sys
 import time
-import libconf
-
-from indexed_gzip import IndexedGzipFile as GzipFile
-
-from cachetools import TTLCache
 from hashlib import sha256
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
+
+import libconf
+from cachetools import TTLCache
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
-
-from .update_metadata_pb2 import DeltaArchiveManifest
-from .update_metadata_pb2 import InstallOperation
-from .update_metadata_pb2 import Signatures
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from indexed_gzip import IndexedGzipFile as GzipFile
 
 from .cpio import Archive
+from .update_metadata_pb2 import (
+    DeltaArchiveManifest,
+    InstallOperation,
+    Signatures,
+)
 
 
 def sizeof_fmt(num, suffix="B"):
@@ -335,7 +335,12 @@ class CPIOUpdateImage(io.RawIOBase):
         # TODO - handle possibilities of multiple images
         info = self._info["stable"]["copy1"]["images"][0]
         entry = self._archive[info["filename"]]
-        self._image = GzipFile(fileobj=entry, mode="rb")
+        self._image: GzipFile = GzipFile(fileobj=entry, mode="rb")
+        # Read entire image to allow seeking based on io.SEEK_END
+        while self._image.read(131_672):
+            pass
+
+        _ = self._image.seek(0, io.SEEK_SET)
 
     def verify(self, publickey):
         # TODO - verify signature
