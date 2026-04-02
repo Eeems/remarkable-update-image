@@ -51,16 +51,20 @@ WHEEL_NAME := $(shell python wheel_name.py)
 _PYTHON_HOST_PLATFORM := $(shell python wheel_name.py --platform)
 ARCHFLAGS := $(shell python wheel_name.py --archflags)
 
+.PHONY: clean
 clean:
 	if [ -d .venv/mnt ] && mountpoint -q .venv/mnt; then \
 	    umount -ql .venv/mnt; \
 	fi
 	git clean --force -dX
 
+.PHONY: build
 build: wheel
 
+.PHONY: release
 release: wheel sdist
 
+.PHONY: install
 install: wheel
 	if type pipx > /dev/null; then \
 	    pipx install \
@@ -75,9 +79,14 @@ install: wheel
 	        ${PACKAGE}; \
 	fi
 
+.PHONY: sdist
 sdist: dist/${PACKAGE}-${VERSION}.tar.gz
 
-wheel: dist/${WHEEL_NAME}
+.PHONY: wheel
+native-wheel: dist/${WHEEL_NAME}
+
+.PHONY: wheel
+wheel: dist/${PACKAGE}-${VERSION}-py3-none-any.whl
 
 dist:
 	mkdir -p dist
@@ -85,6 +94,10 @@ dist:
 dist/${PACKAGE}-${VERSION}.tar.gz: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -m build --sdist
+
+dist/${PACKAGE}-${VERSION}-py3-none-any.whl: ${VENV_BIN_ACTIVATE} dist $(OBJ)
+	. ${VENV_BIN_ACTIVATE}; \
+	python -m build --wheel --config-setting=build_with_nuitka=false
 
 dist/${WHEEL_NAME}: ${VENV_BIN_ACTIVATE} dist $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
@@ -104,7 +117,6 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	python -m pip install \
 	    --extra-index-url=https://wheels.eeems.codes/ \
 	    -r requirements.txt
-
 
 .data/codexctl.zip:
 	mkdir -p .data
@@ -140,40 +152,30 @@ $(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
 	    --proto_path=protobuf \
 	    $(PROTO_SOURCE)
 
+.PHONY: test
 test: ${VENV_BIN_ACTIVATE} $(IMAGES) $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u test.py
 
+.PHONY: all
 all: release
 
+.PHONY: lint
 lint: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff check
 
+.PHONY: lint-fix
 lint-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff check
 
+.PHONY: format
 format: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format --diff
 
+.PHONY: format-fix
 format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format
-
-.PHONY: \
-	all \
-	build \
-	clean \
-	dev \
-	executable \
-	install \
-	release \
-	sdist \
-	wheel \
-	test \
-	lint \
-	lint-fix \
-	format \
-	format-fix
