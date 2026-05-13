@@ -33,23 +33,9 @@ endif
 PROTO_SOURCE := $(wildcard protobuf/*.proto)
 PROTO_OBJ := $(addprefix $(PACKAGE),$(PROTO_SOURCE:%.proto=%_pb2.py))
 
-OBJ := $(wildcard ${PACKAGE}/**)
-OBJ += requirements.txt
-OBJ += pyproject.toml
-OBJ += README.md
-OBJ += $(PROTO_OBJ)
-
 ifeq ($(VENV_BIN_ACTIVATE),)
 VENV_BIN_ACTIVATE := .venv/bin/activate
 endif
-
-ifeq ($(PYTHON),)
-PYTHON := python
-endif
-
-WHEEL_NAME := $(shell python wheel_name.py)
-_PYTHON_HOST_PLATFORM := $(shell python wheel_name.py --platform)
-ARCHFLAGS := $(shell python wheel_name.py --archflags)
 
 .PHONY: clean
 clean:
@@ -57,66 +43,6 @@ clean:
 	    umount -ql .venv/mnt; \
 	fi
 	git clean --force -dX
-
-.PHONY: build
-build: wheel
-
-.PHONY: release
-release: wheel sdist
-
-.PHONY: install
-install: wheel
-	if type pipx > /dev/null; then \
-	    pipx install \
-	        --force \
-	        dist/${WHEEL_NAME}; \
-	else \
-	    pip install \
-	        --user \
-	        --force-reinstall \
-	        --no-index \
-	        --find-links=dist \
-	        ${PACKAGE}; \
-	fi
-
-.PHONY: sdist
-sdist: dist/${PACKAGE}-${VERSION}.tar.gz
-
-.PHONY: native-wheel
-native-wheel: dist/${WHEEL_NAME}
-
-.PHONY: wheel
-wheel: dist/${PACKAGE}-${VERSION}-py3-none-any.whl
-
-dist:
-	mkdir -p dist
-
-dist/${PACKAGE}-${VERSION}.tar.gz: ${VENV_BIN_ACTIVATE} dist $(OBJ)
-	. ${VENV_BIN_ACTIVATE}; \
-	python -m build --sdist
-
-dist/${PACKAGE}-${VERSION}-py3-none-any.whl: ${VENV_BIN_ACTIVATE} dist $(OBJ)
-	. ${VENV_BIN_ACTIVATE}; \
-	python -m build --wheel --config-setting=build_with_nuitka=false
-
-dist/${WHEEL_NAME}: ${VENV_BIN_ACTIVATE} dist $(OBJ)
-	. ${VENV_BIN_ACTIVATE}; \
-	_PYTHON_HOST_PLATFORM="${_PYTHON_HOST_PLATFORM}" \
-	ARCHFLAGS="${ARCHFLAGS}" \
-	python -m build --wheel
-	if ! [ -f "dist/${WHEEL_NAME}" ]; then \
-	  echo "${WHEEL_NAME} Missing!"; \
-	  exit 1; \
-	fi
-
-${VENV_BIN_ACTIVATE}: requirements.txt
-	@echo "Setting up development virtual env in .venv"
-	python -m venv .venv
-	. ${VENV_BIN_ACTIVATE}; \
-	python -m pip install wheel build ruff protobuf-protoc-bin==27.3; \
-	python -m pip install \
-	    --extra-index-url=https://wheels.eeems.codes/ \
-	    -r requirements.txt
 
 .data/codexctl.zip:
 	mkdir -p .data
@@ -145,37 +71,13 @@ IMAGES += .data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-pub
 .data/remarkable-production-memfault-image-${RMPP_FW_VERSION}-rmpp-public: .data/${CODEXCTL_BIN}
 	.data/${CODEXCTL_BIN} download --hardware rmpp --out .data ${RMPP_FW_VERSION}
 
-$(PROTO_OBJ): $(PROTO_SOURCE) ${VENV_BIN_ACTIVATE}
+$(PROTO_OBJ): $(PROTO_SOURCE)
+	emake requirements dev
 	. ${VENV_BIN_ACTIVATE}; \
 	protoc \
 	    --python_out=$(PACKAGE) \
 	    --proto_path=protobuf \
 	    $(PROTO_SOURCE)
 
-.PHONY: test
-test: ${VENV_BIN_ACTIVATE} $(IMAGES) $(OBJ)
-	. ${VENV_BIN_ACTIVATE}; \
-	python -u test.py
-
 .PHONY: all
-all: release
-
-.PHONY: lint
-lint: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff check
-
-.PHONY: lint-fix
-lint-fix: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff check
-
-.PHONY: format
-format: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff format --diff
-
-.PHONY: format-fix
-format-fix: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff format
+all: $(PROTO_OBJ)

@@ -5,7 +5,7 @@ authors = [
   { name="Eeems", email="eeems@eeems.email" },
 ]
 description = "Read reMarkable update images"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 license = "MIT"
 license-files=["LICENSE"]
 classifiers = [
@@ -18,10 +18,24 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: System :: Filesystems",
     "Topic :: Utilities",
 ]
-dynamic = ["dependencies", "readme"]
+dynamic = ["readme"]
+dependencies = [
+  "cryptography==48",
+  "protobuf==7.34.1",
+  "ext4==1.3.3",
+  "libconf==2.0.1",
+  "indexed-gzip==1.10.3",
+  "typing-extensions==4.15.0; python_version<\"3.12\"",
+]
+[project.optional-dependencies]
+test = []
+dev = [
+  "protobuf-protoc-bin==34.1"
+]
 
 [project.urls]
 Homepage = "https://github.com/Eeems/remarkable-update-image"
@@ -39,5 +53,41 @@ dependencies = {file = ["requirements.txt"]}
 readme = {file= ["README.md"], content-type = "text/markdown"}
 
 [build-system]
-requires = ["setuptools>=80", "wheel", "nuitka"]
+requires = ["setuptools >= 77.0.3", "nuitka>=4.0.6"]
 build-backend = "nuitka.distutils.Build"
+
+[tool.ruff]
+exclude = [".venv", "build", "remarkable_update_image/update_metadata_pb2.py"]
+
+[tool.ruff.lint]
+extend-select = [
+    "UP",
+    "PL",
+    "ANN",
+    "S",
+]
+ignore = [
+    "PLW0603",
+    "PLR2004",
+    "PLR0915",
+    "PLR0912",
+    "PLR0911",
+    "PLR6301",
+    "PLR0913",
+    "S101",
+    "S404",
+    "S603",
+    "S607",
+    "S324",
+    "ANN401",
+    "ANN001",
+    "ANN003",
+]
+
+[tool.pyright]
+exclude = [".venv", "build", "remarkable_update_image/update_metadata_pb2.py"]
+reportMissingTypeStubs = false
+reportImportCycles = false
+
+[tool.emake]
+test = ["python -u test.py"]

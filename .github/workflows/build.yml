@@ -10,176 +10,146 @@ on:
 permissions: read-all
 jobs:
   lint:
-    name: Lint
+    name: Lint codebase
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: &python-versions
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
     steps:
-      - name: Debug flags
-        shell: bash
-        if: runner.debug == '1'
-        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
       - name: Checkout the Git repository
         uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
-          cache: "pip"
-      - name: Lint code
-        run: make ${{ env.FLAGS }} lint format
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - &install-emake
+        name: Install emake
+        run: pip install emake
+      - name: Run lint
+        run: emake lint
+        env:
+          PYTHONUNBUFFERED: "1"
+
   test:
-    name: Test ${{ matrix.os }}-py${{ matrix.python }}
+    name: Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
           - windows-latest
-        python:
-          - "3.11"
-          - "3.12"
-          - "3.13"
+          - macos-latest
+        python: *python-versions
     steps:
-      - name: Debug flags
-        shell: bash
-        if: runner.debug == '1'
-        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
-      - name: Install coreutils for macOS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
-        run: brew install coreutils
       - name: Checkout the Git repository
         uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-          cache: "pip"
-      - name: Install wheel
-        run: pip install wheel 'setuptools>=80'
-      - name: Cache test files
-        uses: actions/cache@v4
-        with:
-          path: |
-            .data/**
-          key: test-files-${{ hashFiles('Makefile') }}
+          cache: pip
+      - *install-emake
       - name: Run tests
         shell: bash
-        run: make ${{ env.FLAGS }} test
-  build-wheel:
-    name: Build ${{ matrix.os}}-py${{ matrix.python }} wheel
-    if: github.repository == 'Eeems/remarkable-update-image' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
-    needs: [lint, test]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - macos-15-intel
-          - windows-latest
-        python:
-          - "3.11"
-          - "3.12"
-          - "3.13"
-    steps:
-      - name: Debug flags
-        shell: bash
-        if: runner.debug == '1'
-        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
-      - name: Checkout the Git repository
-        uses: actions/checkout@v6
-      - name: Setup Python
-        if: matrix.os != 'ubuntu-latest'
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python }}
-          cache: "pip"
-      - name: Install wheel
-        if: matrix.os != 'ubuntu-latest'
-        run: pip install wheel 'setuptools>=80'
-      - name: Install coreutils and ccache for macOS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
-        run: brew install coreutils ccache
-      - name: Building package
-        if: matrix.os != 'ubuntu-latest'
-        shell: bash
-        run: make ${{ env.FLAGS }} native-wheel
-      - uses: actions/upload-artifact@v6
-        if: matrix.os != 'ubuntu-latest'
-        with:
-          name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
-          path: dist/*
-          if-no-files-found: error
-      - name: Building manylinux package
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          python_version=${{ matrix.python }}
-          python_version=cp${python_version//.}
-          script=$(cat <<EOF
-          cd /src;
-          export PATH=\$PATH:/opt/python/$python_version-$python_version/bin;
-          pip install "setuptools>=80";
-          make ${{ env.FLAGS }} native-wheel;
-          auditwheel repair dist/*.whl;
-          EOF
-          )
-          docker run -v $(pwd):/src \
-            quay.io/pypa/manylinux_2_34_x86_64:latest \
-            /bin/bash -c "$script"
-      - uses: actions/upload-artifact@v6
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          name: pip-wheel-${{ matrix.os }}-${{ matrix.python }}
-          path: wheelhouse/*
-          if-no-files-found: error
-  build-any-wheel:
-    name: Build wheel
-    runs-on: ubuntu-latest
-    needs: [test, lint]
-    steps:
-      - name: Checkout the Git repository
-        uses: actions/checkout@v6
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: "pip"
-      - name: Install build tool
-        run: pip install build
-      - name: Building package
-        run: make wheel
-      - uses: actions/upload-artifact@v6
-        with:
-          name: pip-wheel-none-any
-          path: dist/*
-          if-no-files-found: error
+        run: emake test
+        env:
+          PYTHONUNBUFFERED: "1"
   build-sdist:
     name: Build sdist
-    needs: [lint, test]
+    needs: &build-needs
+      - lint
+      - test
     runs-on: ubuntu-latest
     steps:
-      - name: Debug flags
-        shell: bash
-        if: runner.debug == '1'
-        run: echo 'FLAGS=-d' >> "$GITHUB_ENV"
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: "pip"
-      - name: Install wheel
-        run: pip install wheel 'setuptools>=80'
-      - name: Building package
-        shell: bash
-        run: make ${{ env.FLAGS }} sdist
+      - *install-emake
+      - name: Building sdist
+        run: emake build --sdist
+        env:
+          PYTHONUNBUFFERED: "1"
       - uses: actions/upload-artifact@v6
         with:
           name: pip-sdist
           path: dist/*
           if-no-files-found: error
+
+  build-any-wheel:
+    name: Build wheel
+    needs: *build-needs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v6
+      - *install-emake
+      - name: Building wheel
+        run: emake build --wheel
+      - name: Test wheel
+        run: emake test --wheel
+        env:
+          PYTHONUNBUFFERED: "1"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: pip-wheel-none-any
+          path: dist/*
+          if-no-files-found: error
+
+  build-wheel:
+    name: Build wheel
+    needs: *build-needs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: *python-versions
+        arch:
+          - x86_64
+          - i686
+          - ppc64le
+          - aarch64
+          - armv7l
+          - riscv64
+          - s390x
+        libc:
+          - glibc
+          - musl
+        exclude:
+          - arch: i686 # segfaults currently
+            python: "3.14"
+            libc: glibc
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v6
+      - *install-emake
+      - name: Building wheel
+        run: |
+          emake build \
+            --native-wheel \
+            --arch ${{ matrix.arch }} \
+            --libc ${{ matrix.libc }} \
+            --python ${{ matrix.python }}
+        env:
+          PYTHONUNBUFFERED: "1"
+      - name: Testing wheel
+        run: |
+          emake test \
+            --wheel \
+            --arch ${{ matrix.arch }} \
+            --libc ${{ matrix.libc }} \
+            --python ${{ matrix.python }}
+        env:
+          PYTHONUNBUFFERED: "1"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: pip-wheel-${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.libc }}
+          path: dist/*
+          if-no-files-found: error
+
   publish:
     name: Publish to PyPi
     if: github.repository == 'Eeems/remarkable-update-image' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
@@ -190,10 +160,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
     environment:
       name: pypi
-      url: https://pypi.org/p/remarkable_update_image
+      url: https://pypi.org/p/remarkable-update-image
     steps:
       - name: Download pip packages
         id: download
@@ -201,13 +170,15 @@ jobs:
         with:
           pattern: pip-*
           merge-multiple: true
+          path: dist
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: ${{ steps.download.outputs.download-path }}
           skip-existing: true
+
   release:
-    name: Add ${{ matrix.artifact }} to release
+    name: Add release artifacts
     if: github.repository == 'Eeems/remarkable-update-image' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
     needs: *release-needs
     runs-on: ubuntu-latest
@@ -216,12 +187,13 @@ jobs:
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - name: Download pip packages
+      - name: Download artifact
         id: download
         uses: actions/download-artifact@v8
         with:
           pattern: pip-*
           merge-multiple: true
+          path: dist
       - name: Upload to release
         run: find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
         env:
