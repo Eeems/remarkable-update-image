@@ -108,7 +108,7 @@ class ProtobufUpdateImage(io.RawIOBase):
             self._offset: int = f.tell()
 
         self._size: int = 0
-        for _, _, length, f in self._blobs:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        for _, _, length, _ in self._blobs:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
             self._size += length
 
     def verify(self, publickey: bytes) -> None:

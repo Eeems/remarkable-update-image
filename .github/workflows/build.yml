@@ -41,9 +41,7 @@ jobs:
         with:
           python-version: 3.11
           cache: pip
-      - &install-emake
-        name: Install emake
-        run: pip install emake
+      - *install-emake
       - name: Generate test files
         run: make images
       - uses: actions/upload-artifact@v6
