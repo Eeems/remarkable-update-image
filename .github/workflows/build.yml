@@ -29,6 +29,7 @@ jobs:
           name: protobuf
           path: remarkable_update_image/*_pb2.py
           if-no-files-found: error
+          include-hidden-files: "true"
 
   test-data:
     name: Generate test data
@@ -52,6 +53,7 @@ jobs:
             .data/*.signed
             .data/remarkable-production-memfault-image-*
           if-no-files-found: error
+          include-hidden-files: "true"
 
   lint:
     name: Lint codebase
@@ -78,7 +80,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: protobuf
-          path: .
+          path: remarkable_update_image/
       - name: Run lint
         run: emake lint
         env:
@@ -111,7 +113,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: test-data
-          path: .
+          path: .data/
       - *install-emake
       - name: Run tests
         shell: bash
