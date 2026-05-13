@@ -9,8 +9,29 @@ on:
     types: [released]
 permissions: read-all
 jobs:
-  generate:
-    name: Generate protobuf and test files
+  protobuf:
+    name: Generate protobuf
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+          cache: pip
+      - &install-emake
+        name: Install emake
+        run: pip install emake
+      - name: Generate protobuf files
+        run: make
+      - uses: actions/upload-artifact@v6
+        with:
+          name: protobuf
+          path: remarkable_update_image/*_pb2.py
+          if-no-files-found: error
+
+  test-data:
+    name: Generate test data
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Git repository
@@ -23,20 +44,19 @@ jobs:
         name: Install emake
         run: pip install emake
       - name: Generate test files
-        run: make
+        run: make images
       - uses: actions/upload-artifact@v6
         with:
-          name: generate
+          name: test-data
           path: |
             .data/*.signed
             .data/remarkable-production-memfault-image-*
-            remarkable_update_image/*_pb2.py
           if-no-files-found: error
 
   lint:
     name: Lint codebase
     runs-on: ubuntu-latest
-    needs: generate
+    needs: protobuf
     strategy:
       fail-fast: false
       matrix:
@@ -53,11 +73,11 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - *install-emake
-      - &download-generated
-        name: Download generated files
+      - &download-protobuf
+        name: Download protobuf files
         uses: actions/download-artifact@v8
         with:
-          name: test.ext4
+          name: protobuf
           path: .
       - name: Run lint
         run: emake lint
@@ -67,7 +87,9 @@ jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
-    needs: generate
+    needs:
+      - protobuf
+      - test-data
     strategy:
       fail-fast: false
       matrix:
@@ -83,7 +105,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - *download-generated
+      - *download-protobuf
+      - &download-test-data
+        name: Download test data
+        uses: actions/download-artifact@v8
+        with:
+          name: test-data
+          path: .
       - *install-emake
       - name: Run tests
         shell: bash
@@ -99,7 +127,8 @@ jobs:
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - *download-generated
+      - *download-protobuf
+      - *download-test-data
       - *install-emake
       - name: Building sdist
         run: emake build --sdist
@@ -118,7 +147,8 @@ jobs:
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - *download-generated
+      - *download-protobuf
+      - *download-test-data
       - *install-emake
       - name: Building wheel
         run: emake build --wheel
@@ -158,7 +188,8 @@ jobs:
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - *download-generated
+      - *download-protobuf
+      - *download-test-data
       - *install-emake
       - name: Building wheel
         run: |

@@ -80,4 +80,7 @@ $(PROTO_OBJ): $(PROTO_SOURCE)
 	    $(PROTO_SOURCE)
 
 .PHONY: all
-all: $(PROTO_OBJ) $(IMAGES)
+all: $(PROTO_OBJ)
+
+.PHONY: images
+images: $(IMAGES)
