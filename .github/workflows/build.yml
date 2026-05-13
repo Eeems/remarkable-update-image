@@ -29,9 +29,8 @@ jobs:
           name: generate
           path: |
             .data/*.signed
-            .data/*-rm1-public
-            .data/*-rmpp-public
-            remarkable-update-image/*_pb2.py
+            .data/remarkable-production-memfault-image-*
+            remarkable_update_image/*_pb2.py
           if-no-files-found: error
 
   lint:
