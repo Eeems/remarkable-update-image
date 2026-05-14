@@ -32,17 +32,10 @@ Dependencies:
 - curl
 - protoc
 - python
-- python-build
-- python-pip
-- python-pipx
-- python-venv
-- python-wheel
-- python-setuptools
+- [emake](https://github.com/Eeems/emake)
 
-```bash
-make # Build wheel and sdist packages in dist/
-make wheel # Build wheel package in dist/
-make sdist # Build sdist package in dist/
-make test # Run unit tests
-make install # Build wheel and install it with pipx or pip install --user
+```shell
+emake build --wheel --native
+make images
+emake test --wheel
 ```
