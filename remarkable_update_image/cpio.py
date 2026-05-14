@@ -1,14 +1,21 @@
-import io
 import errno
-
+import io
+from collections.abc import (
+    KeysView,
+    ValuesView,
+)
+from ctypes import (
+    BigEndianStructure,
+    LittleEndianStructure,
+    Structure,
+    c_char,
+    c_ushort,
+    sizeof,
+)
 from struct import pack
+from typing import final
 
-from ctypes import c_ushort
-from ctypes import c_char
-from ctypes import sizeof
-from ctypes import Structure
-from ctypes import LittleEndianStructure
-from ctypes import BigEndianStructure
+from ._compat import FileObj
 
 
 class MagicError(Exception):
@@ -19,7 +26,7 @@ class ChecksumError(Exception):
     pass
 
 
-def to_hex(data):
+def to_hex(data: int | str) -> str:
     if isinstance(data, int):
         return f"0x{data:02X}"
 
@@ -41,49 +48,51 @@ _header_old_cpio = [
 ]
 
 
+@final
 class header_old_cpio_le(LittleEndianStructure):
     _fields_ = _header_old_cpio
 
 
+@final
 class header_old_cpio_be(BigEndianStructure):
     _fields_ = _header_old_cpio
 
 
-def _header_old_cpio_verify(self) -> None:
-    if self.c_magic != 0o070707:
+def _header_old_cpio_verify(self: header_old_cpio_le | header_old_cpio_be) -> None:
+    if self.c_magic != 0o070707:  # pyright: ignore[reportAny]
         raise MagicError(
             f"{self} magic bytes do not match! "
-            f"expected={to_hex(0o070707)}, "
-            f"actual={to_hex(self.c_magic)}"
+            + f"expected={to_hex(0o070707)}, "
+            + f"actual={to_hex(self.c_magic)}"  # pyright: ignore[reportAny]
         )
 
 
-def _header_old_cpio_namesize(self) -> int:
-    return self.c_namesize.value
+def _header_old_cpio_namesize(self: header_old_cpio_le | header_old_cpio_be) -> int:
+    return self.c_namesize.value  # pyright: ignore[reportAny]
 
 
-def _header_old_cpio_filesize(self) -> int:
-    return self.c_filesize.value
+def _header_old_cpio_filesize(self: header_old_cpio_le | header_old_cpio_be) -> int:
+    return self.c_filesize.value  # pyright: ignore[reportAny]
 
 
-def _header_old_cpio_entrysize(self) -> int:
-    return self.size + self.filesize + (self.filesize % 2)
+def _header_old_cpio_entrysize(self: header_old_cpio_le | header_old_cpio_be) -> int:
+    return self.size + self.filesize + (self.filesize % 2)  # pyright: ignore[reportAny]
 
 
-def _header_old_cpio_size(self) -> int:
-    return sizeof(self) + self.namesize + (self.namesize % 2)
+def _header_old_cpio_size(self: header_old_cpio_le | header_old_cpio_be) -> int:
+    return sizeof(self) + self.namesize + (self.namesize % 2)  # pyright: ignore[reportAny]
 
 
-header_old_cpio_le.verify = _header_old_cpio_verify
-header_old_cpio_be.verify = _header_old_cpio_verify
-header_old_cpio_le.namesize = property(_header_old_cpio_namesize)
-header_old_cpio_be.namesize = property(_header_old_cpio_namesize)
-header_old_cpio_le.filesize = property(_header_old_cpio_filesize)
-header_old_cpio_be.filesize = property(_header_old_cpio_filesize)
-header_old_cpio_le.entrysize = property(_header_old_cpio_entrysize)
-header_old_cpio_be.entrysize = property(_header_old_cpio_entrysize)
-header_old_cpio_le.size = property(_header_old_cpio_size)
-header_old_cpio_be.size = property(_header_old_cpio_size)
+header_old_cpio_le.verify = _header_old_cpio_verify  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_be.verify = _header_old_cpio_verify  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_le.namesize = property(_header_old_cpio_namesize)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_be.namesize = property(_header_old_cpio_namesize)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_le.filesize = property(_header_old_cpio_filesize)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_be.filesize = property(_header_old_cpio_filesize)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_le.entrysize = property(_header_old_cpio_entrysize)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_be.entrysize = property(_header_old_cpio_entrysize)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_le.size = property(_header_old_cpio_size)  # pyright: ignore[reportAttributeAccessIssue]
+header_old_cpio_be.size = property(_header_old_cpio_size)  # pyright: ignore[reportAttributeAccessIssue]
 
 _cpio_odc_header = [
     ("c_magic", c_char * 6),
@@ -100,49 +109,51 @@ _cpio_odc_header = [
 ]
 
 
+@final
 class cpio_odc_header_le(LittleEndianStructure):
     _fields_ = _cpio_odc_header
 
 
+@final
 class cpio_odc_header_be(BigEndianStructure):
     _fields_ = _cpio_odc_header
 
 
-def _cpio_odc_header_verify(self) -> None:
-    if self.c_magic != "070707":
+def _cpio_odc_header_verify(self: cpio_odc_header_le | cpio_odc_header_be) -> None:
+    if self.c_magic != "070707":  # pyright: ignore[reportAny]
         raise MagicError(
             f"{self} magic bytes do not match! "
-            f"expected={'070707'}, "
-            f"actual={self.c_magic}"
+            + f"expected={'070707'}, "
+            + f"actual={self.c_magic}"  # pyright: ignore[reportAny]
         )
 
 
-def _cpio_odc_header_namesize(self) -> int:
-    return int(self.c_namesize, 8)
+def _cpio_odc_header_namesize(self: cpio_odc_header_le | cpio_odc_header_be) -> int:
+    return int(self.c_namesize, 8)  # pyright: ignore[reportAny]
 
 
-def _cpio_odc_header_filesize(self) -> int:
-    return int(self.c_filesize, 8)
+def _cpio_odc_header_filesize(self: cpio_odc_header_le | cpio_odc_header_be) -> int:
+    return int(self.c_filesize, 8)  # pyright: ignore[reportAny]
 
 
-def _cpio_odc_header_entrysize(self) -> int:
-    return self.size + self.filesize + (self.filesize % 2)
+def _cpio_odc_header_entrysize(self: cpio_odc_header_le | cpio_odc_header_be) -> int:
+    return self.size + self.filesize + (self.filesize % 2)  # pyright: ignore[reportAny]
 
 
-def _cpio_odc_header_size(self) -> int:
-    return sizeof(self) + self.namesize + (self.namesize % 2)
+def _cpio_odc_header_size(self: cpio_odc_header_le | cpio_odc_header_be) -> int:
+    return sizeof(self) + self.namesize + (self.namesize % 2)  # pyright: ignore[reportAny]
 
 
-cpio_odc_header_le.verify = _cpio_odc_header_verify
-cpio_odc_header_be.verify = _cpio_odc_header_verify
-cpio_odc_header_le.namesize = property(_cpio_odc_header_namesize)
-cpio_odc_header_be.namesize = property(_cpio_odc_header_namesize)
-cpio_odc_header_le.filesize = property(_cpio_odc_header_filesize)
-cpio_odc_header_be.filesize = property(_cpio_odc_header_filesize)
-cpio_odc_header_le.entrysize = property(_cpio_odc_header_entrysize)
-cpio_odc_header_be.entrysize = property(_cpio_odc_header_entrysize)
-cpio_odc_header_le.size = property(_cpio_odc_header_size)
-cpio_odc_header_be.size = property(_cpio_odc_header_size)
+cpio_odc_header_le.verify = _cpio_odc_header_verify  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_be.verify = _cpio_odc_header_verify  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_le.namesize = property(_cpio_odc_header_namesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_be.namesize = property(_cpio_odc_header_namesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_le.filesize = property(_cpio_odc_header_filesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_be.filesize = property(_cpio_odc_header_filesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_le.entrysize = property(_cpio_odc_header_entrysize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_be.entrysize = property(_cpio_odc_header_entrysize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_le.size = property(_cpio_odc_header_size)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_odc_header_be.size = property(_cpio_odc_header_size)  # pyright: ignore[reportAttributeAccessIssue]
 
 _cpio_newc_header = [
     ("c_magic", c_char * 6),
@@ -162,20 +173,22 @@ _cpio_newc_header = [
 ]
 
 
+@final
 class cpio_newc_header_le(LittleEndianStructure):
     _fields_ = _cpio_newc_header
 
 
+@final
 class cpio_newc_header_be(BigEndianStructure):
     _fields_ = _cpio_newc_header
 
 
-def _cpio_newc_header_verify(self) -> None:
-    if self.c_magic not in (b"070701", b"070702"):
+def _cpio_newc_header_verify(self: cpio_newc_header_le | cpio_newc_header_be) -> None:
+    if self.c_magic not in (b"070701", b"070702"):  # pyright: ignore[reportAny]
         raise MagicError(
             f"{self} magic bytes do not match! "
-            f"expected=070701 or 070702, "
-            f"actual={self.c_magic}"
+            + "expected=070701 or 070702, "
+            + f"actual={self.c_magic}"  # pyright: ignore[reportAny]
         )
 
     if self.c_magic == b"070702":
@@ -183,56 +196,56 @@ def _cpio_newc_header_verify(self) -> None:
         pass
 
 
-def _cpio_newc_header_namesize(self) -> int:
-    return int(self.c_namesize, 16)
+def _cpio_newc_header_namesize(self: cpio_newc_header_le | cpio_newc_header_be) -> int:
+    return int(self.c_namesize, 16)  # pyright: ignore[reportAny]
 
 
-def _cpio_newc_header_filesize(self) -> int:
-    return int(self.c_filesize, 16)
+def _cpio_newc_header_filesize(self: cpio_newc_header_le | cpio_newc_header_be) -> int:
+    return int(self.c_filesize, 16)  # pyright: ignore[reportAny]
 
 
-def _cpio_newc_header_entrysize(self) -> int:
-    size = self.size + self.filesize
-    if self.filesize % 4:
-        size += 4 - (self.filesize % 4)
+def _cpio_newc_header_entrysize(self: cpio_newc_header_le | cpio_newc_header_be) -> int:
+    size: int = self.size + self.filesize  # pyright: ignore[reportAny]
+    if self.filesize % 4:  # pyright: ignore[reportAny]
+        size += 4 - (self.filesize % 4)  # pyright: ignore[reportAny]
 
     return size
 
 
-def _cpio_newc_header_size(self) -> int:
-    size = sizeof(self) + self.namesize
+def _cpio_newc_header_size(self: cpio_newc_header_le | cpio_newc_header_be) -> int:
+    size: int = sizeof(self) + self.namesize  # pyright: ignore[reportAny]
     if size % 4:
         size += 4 - (size % 4)
 
     return size
 
 
-cpio_newc_header_le.verify = _cpio_newc_header_verify
-cpio_newc_header_be.verify = _cpio_newc_header_verify
-cpio_newc_header_le.namesize = property(_cpio_newc_header_namesize)
-cpio_newc_header_be.namesize = property(_cpio_newc_header_namesize)
-cpio_newc_header_le.filesize = property(_cpio_newc_header_filesize)
-cpio_newc_header_be.filesize = property(_cpio_newc_header_filesize)
-cpio_newc_header_le.entrysize = property(_cpio_newc_header_entrysize)
-cpio_newc_header_be.entrysize = property(_cpio_newc_header_entrysize)
-cpio_newc_header_le.size = property(_cpio_newc_header_size)
-cpio_newc_header_be.size = property(_cpio_newc_header_size)
+cpio_newc_header_le.verify = _cpio_newc_header_verify  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_be.verify = _cpio_newc_header_verify  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_le.namesize = property(_cpio_newc_header_namesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_be.namesize = property(_cpio_newc_header_namesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_le.filesize = property(_cpio_newc_header_filesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_be.filesize = property(_cpio_newc_header_filesize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_le.entrysize = property(_cpio_newc_header_entrysize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_be.entrysize = property(_cpio_newc_header_entrysize)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_le.size = property(_cpio_newc_header_size)  # pyright: ignore[reportAttributeAccessIssue]
+cpio_newc_header_be.size = property(_cpio_newc_header_size)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class Entry:
-    def __init__(self, fileobj, offset):
-        self.fileobj = fileobj
-        self.offset = offset
-        self.cursor = 0
-        self.header = self.read_header()
-        self.header.verify()
-        self.dataoffset = offset + self.header.size
+    def __init__(self, fileobj: FileObj, offset: int) -> None:
+        self.fileobj: FileObj = fileobj
+        self.offset: int = offset
+        self.cursor: int = 0
+        self.header: Structure = self.read_header()
+        self.header.verify()  # pyright: ignore[reportAny]
+        self.dataoffset: int = offset + self.header.size  # pyright: ignore[reportAny]
 
-    def __len__(self):
-        return self.header.filesize
+    def __len__(self) -> int:
+        return self.header.filesize  # pyright: ignore[reportAny]
 
     def read_header(self) -> Structure:
-        self.fileobj.seek(self.offset)
+        _ = self.fileobj.seek(self.offset)
         magic = self.fileobj.read(sizeof(c_ushort))
         if magic == pack(">H", 0o070707):
             cls = header_old_cpio_be
@@ -241,7 +254,7 @@ class Entry:
             cls = header_old_cpio_le
 
         else:
-            self.fileobj.seek(self.offset)
+            _ = self.fileobj.seek(self.offset)
             magic = self.fileobj.read(sizeof(c_char * 6))
             if magic == b"070707":
                 cls = cpio_odc_header_le
@@ -258,34 +271,34 @@ class Entry:
             else:
                 raise MagicError(f"Unknown magic: {magic}")
 
-        self.fileobj.seek(self.offset)
+        _ = self.fileobj.seek(self.offset)
         data = self.fileobj.read(sizeof(cls))
         return cls.from_buffer_copy(data)
 
     @property
     def name(self) -> bytes:
-        self.fileobj.seek(self.offset + sizeof(self.header))
-        return self.fileobj.read(self.header.namesize).rstrip(b"\x00")
+        _ = self.fileobj.seek(self.offset + sizeof(self.header))
+        return self.fileobj.read(self.header.namesize).rstrip(b"\x00")  # pyright: ignore[reportAny]
 
     @property
     def data(self) -> bytes:
-        self.fileobj.seek(self.dataoffset)
-        return self.fileobj.read(self.header.filesize)
+        _ = self.fileobj.seek(self.dataoffset)
+        return self.fileobj.read(self.header.filesize)  # pyright: ignore[reportAny]
 
     @property
-    def size(self):
+    def size(self) -> int:
         return len(self)
 
-    def writable(self):
+    def writable(self) -> bool:
         return False
 
-    def seekable(self):
+    def seekable(self) -> bool:
         return True
 
-    def readable(self):
+    def readable(self) -> bool:
         return True
 
-    def seek(self, offset, mode=io.SEEK_SET) -> None:
+    def seek(self, offset: int, mode: int = io.SEEK_SET) -> None:
         if mode == io.SEEK_CUR:
             offset += self.cursor
 
@@ -303,7 +316,7 @@ class Entry:
     def tell(self) -> int:
         return self.cursor
 
-    def read(self, size=-1) -> bytes:
+    def read(self, size: int = -1) -> bytes:
         if size < 0:
             size = len(self) - self.cursor
 
@@ -314,27 +327,27 @@ class Entry:
 
         return data
 
-    def peek(self, size=0) -> bytes:
+    def peek(self, size: int = 0) -> bytes:
         if self.cursor >= len(self):
             return b""
 
         if not size or size + self.cursor > len(self):
             size = len(self) - self.cursor
 
-        self.fileobj.seek(self.dataoffset + self.cursor)
+        _ = self.fileobj.seek(self.dataoffset + self.cursor)
         return self.fileobj.read(size)
 
 
 class Archive:
-    def __init__(self, fileOrPath):
-        self.fileOrPath = fileOrPath
-        self.fileobj = None
-        self.entries = {}
+    def __init__(self, fileOrPath: str | FileObj) -> None:
+        self.fileOrPath: str | FileObj = fileOrPath
+        self.fileobj: FileObj | None = None
+        self.entries: dict[bytes, Entry] = {}
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.open()
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
         self.close()
 
     def __getitem__(self, key: str | bytes) -> Entry | None:
@@ -343,7 +356,7 @@ class Archive:
     def __len__(self) -> int:
         return len(self.entries)
 
-    def open(self):
+    def open(self) -> None:
         if self.fileobj is not None:
             return
 
@@ -354,35 +367,33 @@ class Archive:
             self.fileobj = self.fileOrPath
 
         offset = 0
-        self.fileobj.seek(0, io.SEEK_END)
+        _ = self.fileobj.seek(0, io.SEEK_END)
         size = self.fileobj.tell()
-        self.fileobj.seek(0, io.SEEK_SET)
+        _ = self.fileobj.seek(0, io.SEEK_SET)
         while offset < size:
             entry = Entry(self.fileobj, offset)
             if entry.name == b"TRAILER!!!":
                 break
 
             self.entries[entry.name] = entry
-            offset += entry.header.entrysize
+            offset += entry.header.entrysize  # pyright: ignore[reportAny]
 
-    def close(self):
+    def close(self) -> None:
         if isinstance(self.fileOrPath, str):
+            assert self.fileobj is not None
             self.fileobj.close()
 
         self.fileobj = None
         self.entries = {}
 
-    def get(self, name: str | bytes, default=None) -> Entry | None:
+    def get(self, name: str | bytes, default: Entry | None = None) -> Entry | None:
         if isinstance(name, str):
             name = name.encode("ascii")
 
-        if not isinstance(name, bytes):
-            raise NotImplementedError()
-
         return self.entries.get(name, default)
 
-    def keys(self) -> list[bytes]:
+    def keys(self) -> KeysView[bytes]:
         return self.entries.keys()
 
-    def values(self) -> list[Entry]:
+    def values(self) -> ValuesView[Entry]:
         return self.entries.values()

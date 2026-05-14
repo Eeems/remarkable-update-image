@@ -1,27 +1,42 @@
+# pyright: reportConstantRedefinition=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+import difflib
+import errno
 import os
 import sys
-import ext4
-import errno
-import difflib
-
+from hashlib import (
+    md5,
+    sha256,
+)
 from tempfile import TemporaryFile
-from ext4 import ChecksumError
-from ext4 import SymbolicLink
-from ext4.struct import to_hex
-from hashlib import md5
-from hashlib import sha256
-from remarkable_update_image import UpdateImage
-from remarkable_update_image import UpdateImageSignatureException
-from remarkable_update_image.image import sizeof_fmt
-from remarkable_update_image.image import ProtobufUpdateImage
-from remarkable_update_image.image import CPIOUpdateImage
+from typing import Any
+
+import ext4
+from ext4 import (
+    ChecksumError,  # pyright: ignore[reportAttributeAccessIssue]
+    SymbolicLink,  # pyright: ignore[reportAttributeAccessIssue]
+)
+from ext4.struct import to_hex  # pyright: ignore[reportMissingImports]
+
+from remarkable_update_image import (
+    UpdateImage,
+    UpdateImageSignatureException,
+)
+from remarkable_update_image._compat import FileObj
+from remarkable_update_image.image import (
+    CPIOUpdateImage,
+    ProtobufUpdateImage,
+    sizeof_fmt,
+)
 
 FAILED = False
 
 
-def assert_byte(reader, offset, byte):
+def assert_byte(reader: FileObj, offset: int, byte: bytes) -> None:
     global FAILED
-    reader.seek(offset)
+    _ = reader.seek(offset)
     data = reader.read(1)
     print(f"checking offset {offset:08X} is {to_hex(byte)}: ", end="")
     if len(data) != 1:
@@ -39,7 +54,11 @@ def assert_byte(reader, offset, byte):
     print("pass")
 
 
-def assert_raw_byte(image, offset, byte):
+def assert_raw_byte(
+    image: CPIOUpdateImage | ProtobufUpdateImage,
+    offset: int,
+    byte: bytes,
+) -> None:
     global FAILED
     _ = image.seek(offset)
     data = image.read(1)
@@ -59,7 +78,7 @@ def assert_raw_byte(image, offset, byte):
     print("pass")
 
 
-def assert_exists(volume, path):
+def assert_exists(volume: ext4.Volume, path: str) -> None:  # pyright: ignore[reportUnknownParameterType]
     global FAILED
     print(f"checking that {path} exists: ", end="")
     try:
@@ -71,7 +90,7 @@ def assert_exists(volume, path):
         FAILED = True
 
 
-def assert_hash(volume, expected_hash, path):
+def assert_hash(volume: ext4.Volume, expected_hash: str, path: str) -> None:  # pyright: ignore[reportUnknownParameterType]
     global FAILED
     print(f"checking {path} md5sum is {expected_hash}: ", end="")
     inode = volume.inode_at(path)
@@ -85,7 +104,7 @@ def assert_hash(volume, expected_hash, path):
     print("pass")
 
 
-def assert_symlink_to(volume, path, symlink):
+def assert_symlink_to(volume: ext4.Volume, path: str, symlink: bytes) -> None:  # pyright: ignore[reportUnknownParameterType]
     assert isinstance(symlink, bytes)
     global FAILED
     print(f"checking {path} is symlink to {symlink}: ", end="")
@@ -106,10 +125,10 @@ def assert_symlink_to(volume, path, symlink):
     print("pass")
 
 
-def assert_ls(volume, path, expected):
+def assert_ls(volume: ext4.Volume, path: str, expected: list[str]) -> None:  # pyright: ignore[reportUnknownParameterType]
     global FAILED
     print(f"checking {path} contents: ", end="")
-    actual = [d.name_str for d, _ in volume.inode_at(path).opendir()]
+    actual: list[str] = [d.name_str for d, _ in volume.inode_at(path).opendir()]
     if expected == actual:
         print("pass")
         return
@@ -120,7 +139,10 @@ def assert_ls(volume, path, expected):
         print(f"  {diff}")
 
 
-def assert_image_type(image, expected_type):
+def assert_image_type(
+    image: CPIOUpdateImage | ProtobufUpdateImage,
+    expected_type: type,
+) -> None:
     global FAILED
     print(f"checking image is {expected_type.__name__}: ", end="")
     if isinstance(image, expected_type):
@@ -132,10 +154,10 @@ def assert_image_type(image, expected_type):
     print(f"  Error: image is {type(image).__name__}")
 
 
-def assert_attr(obj, attr, expected):
+def assert_attr(obj: object, attr: str, expected: Any) -> None:  # pyright: ignore[reportExplicitAny, reportAny]
     global FAILED
     print(f"checking {attr} is {expected!r}: ", end="")
-    actual = getattr(obj, attr)
+    actual = getattr(obj, attr)  # pyright: ignore[reportAny]
     if actual == expected:
         print("pass")
         return
@@ -145,7 +167,7 @@ def assert_attr(obj, attr, expected):
     print(f"  Error: {attr} is {actual!r}")
 
 
-def assert_no_attr(obj, attr):
+def assert_no_attr(obj: object, attr: str) -> None:
     global FAILED
     print(f"checking {attr} attribute does not exist: ", end="")
     if not hasattr(obj, attr):
@@ -157,7 +179,7 @@ def assert_no_attr(obj, attr):
     print(f"  Error: {attr} attribute exists with value {getattr(obj, attr)!r}")
 
 
-def assert_in_archive(image, key):
+def assert_in_archive(image: CPIOUpdateImage, key: str) -> None:
     global FAILED
     print(f"checking archive contains {key}: ", end="")
     if key.encode() in image.archive.keys():
@@ -169,7 +191,10 @@ def assert_in_archive(image, key):
     print(f"  Error: {key} not in archive")
 
 
-def assert_extract(image, expected_digest):
+def assert_extract(
+    image: CPIOUpdateImage | ProtobufUpdateImage,
+    expected_digest: str,
+) -> None:
     global FAILED
     print(f"checking extracting {image.update_file}: ", end="")
     try:
@@ -190,7 +215,7 @@ def assert_extract(image, expected_digest):
         print(e)
 
 
-def validate_root_inode(volume):
+def validate_root_inode(volume: ext4.Volume) -> None:  # pyright: ignore[reportUnknownParameterType]
     global FAILED
     print(f"validating root inode {volume.uuid}: ", end="")
     try:
@@ -205,7 +230,7 @@ def validate_root_inode(volume):
         FAILED = True
 
 
-def assert_value(name, value, expected):
+def assert_value(name: str, value: Any, expected: Any) -> None:  # pyright: ignore[reportExplicitAny, reportAny]
     global FAILED
     print(f"checking {name} is {expected}: ", end="")
     if value == expected:
@@ -222,7 +247,7 @@ with UpdateImage(path) as image:
     assert_image_type(image, CPIOUpdateImage)
     assert_attr(image, "version", "3.11.3.3")
     assert_attr(image, "hardware_type", "reMarkable1")
-    assert_in_archive(image, "sw-description")
+    assert_in_archive(image, "sw-description")  # pyright: ignore[reportArgumentType]
     volume = ext4.Volume(image)
     validate_root_inode(volume)
     assert_ls(
@@ -479,7 +504,7 @@ with UpdateImage(path) as image:
     assert_image_type(image, CPIOUpdateImage)
     assert_attr(image, "version", "3.20.0.92")
     assert_attr(image, "hardware_type", "ferrari")
-    assert_in_archive(image, "sw-description")
+    assert_in_archive(image, "sw-description")  # pyright: ignore[reportArgumentType]
     volume = ext4.Volume(image)
     validate_root_inode(volume)
     assert_extract(

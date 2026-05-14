@@ -4,52 +4,70 @@ import os
 import struct
 import sys
 import time
+from collections.abc import Callable, Generator
 from hashlib import sha256
+from typing import (
+    Any,
+    cast,
+)
 
 import libconf
 from cachetools import TTLCache
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from indexed_gzip import IndexedGzipFile as GzipFile
+from indexed_gzip import (
+    IndexedGzipFile as GzipFile,  # pyright: ignore[reportUnknownVariableType]
+)
 
-from .cpio import Archive
+from ._compat import override
+from .cpio import (
+    Archive,
+    Entry,
+)
 from .update_metadata_pb2 import (
-    DeltaArchiveManifest,
-    InstallOperation,
-    Signatures,
+    DeltaArchiveManifest,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
+    InstallOperation,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
+    Signatures,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
 )
 
 
-def sizeof_fmt(num, suffix="B"):
+def sizeof_fmt(num: int | float, suffix: str = "B") -> str:
     for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
         if abs(num) < 1024.0:
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
+
     return f"{num:.1f}Yi{suffix}"
 
 
-def range_contains(range1, range2):
+def range_contains(range1: range, range2: range) -> bool:
     return range1.start < range2.stop and range2.start < range1.stop
 
 
-class BlockCache(TTLCache):
-    def __init__(self, maxsize, ttl, timer=time.monotonic, getsizeof=sys.getsizeof):
+class BlockCache(TTLCache[tuple[int, int] | int, bytes]):
+    def __init__(
+        self,
+        maxsize: int,
+        ttl: int,
+        timer: Callable[[], float] = time.monotonic,
+        getsizeof: Callable[[object], int] = sys.getsizeof,
+    ) -> None:
         super().__init__(maxsize, ttl, timer, getsizeof)
 
     @property
-    def usage_str(self):
+    def usage_str(self) -> str:
         return f"{self.curr_size_str}/{self.max_size_str}"
 
     @property
-    def curr_size_str(self):
+    def curr_size_str(self) -> str:
         return sizeof_fmt(self.currsize)
 
     @property
-    def max_size_str(self):
+    def max_size_str(self) -> str:
         return sizeof_fmt(self.maxsize)
 
-    def will_fit(self, value) -> bool:
+    def will_fit(self, value: bytes) -> bool:
         return self.maxsize >= self.getsizeof(value)
 
 
@@ -58,22 +76,20 @@ class UpdateImageException(Exception):
 
 
 class UpdateImageSignatureException(UpdateImageException):
-    def __init__(self, message, signed_hash, actual_hash):
+    def __init__(self, message: str, signed_hash: bytes, actual_hash: bytes) -> None:
         super().__init__(message)
-        self.signed_hash = signed_hash
-        self.actual_hash = actual_hash
+        self.signed_hash: bytes = signed_hash
+        self.actual_hash: bytes = actual_hash
 
 
 class ProtobufUpdateImage(io.RawIOBase):
-    _manifest = None
-    _offset = -1
-    _size = 0
-    _pos = 0
-
-    def __init__(self, update_file, cache_size=500, cache_ttl=60):
-        self.update_file = update_file
-        self.cache_size = cache_size
-        self._cache = BlockCache(
+    def __init__(
+        self, update_file: str, cache_size: int = 500, cache_ttl: int = 60
+    ) -> None:
+        self._pos: int = 0
+        self.update_file: str = update_file
+        self.cache_size: int = cache_size
+        self._cache: BlockCache = BlockCache(
             maxsize=cache_size * 1024 * 1024,
             ttl=cache_ttl,
         )
@@ -82,86 +98,99 @@ class ProtobufUpdateImage(io.RawIOBase):
             if magic != b"CrAU":
                 raise UpdateImageException("Wrong header")
 
-            major = struct.unpack(">Q", f.read(8))[0]
+            major = cast(int, struct.unpack(">Q", f.read(8))[0])
             if major != 1:
                 raise UpdateImageException("Unsupported version")
 
-            size = struct.unpack(">Q", f.read(8))[0]
+            size = cast(int, struct.unpack(">Q", f.read(8))[0])
             data = f.read(size)
-            self._manifest = DeltaArchiveManifest.FromString(data)
-            self._offset = f.tell()
+            self._manifest: DeltaArchiveManifest = DeltaArchiveManifest.FromString(data)  # pyright: ignore[reportUnknownMemberType]
+            self._offset: int = f.tell()
 
-        for blob, offset, length, f in self._blobs:
+        self._size: int = 0
+        for _, _, length, _ in self._blobs:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
             self._size += length
 
-    def verify(self, publickey):
+    def verify(self, publickey: bytes) -> None:
         _publickey = load_pem_public_key(publickey)
         with open(self.update_file, "rb") as f:
-            data = f.read(self._offset + self._manifest.signatures_offset)
+            data = f.read(self._offset + self._manifest.signatures_offset)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
 
         actual_hash = sha256(data).digest()
-        signed_hash = _publickey.recover_data_from_signature(
-            self.signature,
+        signature = self.signature
+        assert signature is not None
+        signed_hash = _publickey.recover_data_from_signature(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportAttributeAccessIssue]
+            signature,
             PKCS1v15(),
             SHA256(),
         )
         if actual_hash != signed_hash:
             raise UpdateImageSignatureException(
-                "Actual hash does not match signed hash", signed_hash, actual_hash
+                "Actual hash does not match signed hash",
+                signed_hash,  # pyright: ignore[reportUnknownArgumentType]
+                actual_hash,
             )
 
     @property
-    def block_size(self):
-        return self._manifest.block_size
+    def block_size(self) -> int:
+        return self._manifest.block_size  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
     @property
-    def signature(self):
-        for signature in self._signatures:
-            if signature.version == 2:
-                return signature.data
+    def signature(self) -> bytes | None:
+        for signature in self._signatures:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            if signature.version == 2:  # pyright: ignore[reportUnknownMemberType]
+                return signature.data  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
         return None
 
     @property
-    def _signatures(self):
+    def _signatures(self) -> Generator[Signatures.Signature]:  # pyright: ignore[reportUnknownParameterType, reportUnknownMemberType]
         with open(self.update_file, "rb") as f:
-            f.seek(self._offset + self._manifest.signatures_offset)
-            for signature in Signatures.FromString(
-                f.read(self._manifest.signatures_size)
-            ).signatures:
-                yield signature
+            _ = f.seek(self._offset + self._manifest.signatures_offset)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+            yield from Signatures.FromString(  # pyright: ignore[reportUnknownMemberType]
+                f.read(self._manifest.signatures_size)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+            ).signatures
 
     @property
-    def _blobs(self):
+    def _blobs(self) -> Generator[tuple[InstallOperation, int, int, io.BufferedReader]]:  # pyright: ignore[reportUnknownParameterType]
         with open(self.update_file, "rb") as f:
-            for blob in self._manifest.partition_operations:
-                f.seek(self._offset + blob.data_offset)
-                dst_offset = blob.dst_extents[0].start_block * self.block_size
-                dst_length = blob.dst_extents[0].num_blocks * self.block_size
-                if blob.type not in (0, 1):
-                    raise UpdateImageException(f"Unsupported type {blob.type}")
+            for blob in self._manifest.partition_operations:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                _ = f.seek(self._offset + blob.data_offset)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+                dst_offset = cast(
+                    int,
+                    blob.dst_extents[0].start_block * self.block_size,  # pyright: ignore[reportUnknownMemberType]
+                )
+                dst_length = cast(int, blob.dst_extents[0].num_blocks * self.block_size)  # pyright: ignore[reportUnknownMemberType]
+                if blob.type not in (0, 1):  # pyright: ignore[reportUnknownMemberType]
+                    raise UpdateImageException(f"Unsupported type {blob.type}")  # pyright: ignore[reportUnknownMemberType]
 
                 yield blob, dst_offset, dst_length, f
 
         self.expire()
 
-    def _read_blob(self, blob, blob_offset, blob_length, f):
+    def _read_blob(
+        self,
+        blob: InstallOperation,  # pyright: ignore[reportUnknownParameterType]
+        blob_offset: int,
+        blob_length: int,
+        f: io.BufferedReader,
+    ) -> bytes:
         if blob_offset in self._cache:
             return self._cache[blob_offset]
 
-        if blob.type not in (
-            InstallOperation.Type.REPLACE,
-            InstallOperation.Type.REPLACE_BZ,
+        if blob.type not in (  # pyright: ignore[reportUnknownMemberType]
+            InstallOperation.Type.REPLACE,  # pyright: ignore[reportUnknownMemberType]
+            InstallOperation.Type.REPLACE_BZ,  # pyright: ignore[reportUnknownMemberType]
         ):
             raise NotImplementedError(
-                f"Error: {InstallOperation.Type.keys()[blob.type]} has not been implemented yet"
+                f"Error: {InstallOperation.Type.keys()[blob.type]} has not been implemented yet"  # pyright: ignore[reportUnknownMemberType]
             )
 
-        blob_data = f.read(blob.data_length)
-        if sha256(blob_data).digest() != blob.data_sha256_hash:
+        blob_data = f.read(blob.data_length)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+        if sha256(blob_data).digest() != blob.data_sha256_hash:  # pyright: ignore[reportUnknownMemberType]
             raise UpdateImageException("Error: Data has wrong sha256sum")
 
-        if blob.type == InstallOperation.Type.REPLACE_BZ:
+        if blob.type == InstallOperation.Type.REPLACE_BZ:  # pyright: ignore[reportUnknownMemberType]
             try:
                 blob_data = bz2.decompress(blob_data)
 
@@ -184,50 +213,61 @@ class ProtobufUpdateImage(io.RawIOBase):
         return blob_data
 
     @property
-    def cache(self):
+    def cache(self) -> BlockCache:
         return self._cache
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self._size
 
-    def expire(self):
-        self._cache.expire()
+    def expire(self) -> None:
+        _ = self._cache.expire()
 
-    def writable(self):
+    @override
+    def writable(self) -> bool:
         return False
 
-    def seekable(self):
+    @override
+    def seekable(self) -> bool:
         return True
 
-    def readable(self):
+    @override
+    def readable(self) -> bool:
         return True
 
-    def seek(self, offset, whence=os.SEEK_SET):
+    @override
+    def seek(self, offset: int, whence: int = os.SEEK_SET) -> int:
         if whence not in (os.SEEK_SET, os.SEEK_CUR, os.SEEK_END):
             raise OSError("Not supported whence")
+
         if whence == os.SEEK_SET and offset < 0:
             raise ValueError("offset can't be negative")
+
         if whence == os.SEEK_END and offset > 0:
             raise ValueError("offset can't be positive")
 
         if whence == os.SEEK_SET:
             self._pos = min(max(offset, 0), self._size)
+
         elif whence == os.SEEK_CUR:
             self._pos = min(max(self._pos + offset, 0), self._size)
+
         elif whence == os.SEEK_END:
             self._pos = min(max(self._size + offset, 0), self._size)
+
         return self._pos
 
-    def tell(self):
+    @override
+    def tell(self) -> int:
         return self._pos
 
-    def read(self, size=-1):
+    @override
+    def read(self, size: int = -1) -> bytes:
         res = self.peek(size)
-        self.seek(len(res), whence=os.SEEK_CUR)
+        _ = self.seek(len(res), whence=os.SEEK_CUR)
         return res
 
-    def peek(self, size=0):
+    def peek(self, size: int = 0) -> bytes:
         offset = self._pos
         if offset >= self._size:
             return b""
@@ -236,7 +276,7 @@ class ProtobufUpdateImage(io.RawIOBase):
             size = self._size - offset
 
         res = bytearray(size)
-        for blob, blob_offset, blob_length, f in self._blobs:
+        for blob, blob_offset, blob_length, f in self._blobs:  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
             if not range_contains(
                 range(offset, offset + size),
                 range(blob_offset, blob_offset + blob_length),
@@ -246,7 +286,7 @@ class ProtobufUpdateImage(io.RawIOBase):
 
                 continue
 
-            blob_data = self._read_blob(blob, blob_offset, blob_length, f)
+            blob_data = self._read_blob(blob, blob_offset, blob_length, f)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
             blob_start_offset = max(offset - blob_offset, 0)
             blob_end_offset = min(offset - blob_offset + size, blob_length)
             data = blob_data[blob_start_offset:blob_end_offset]
@@ -266,7 +306,7 @@ class ProtobufUpdateImage(io.RawIOBase):
                 + f"\n  blob_start_offset: {blob_start_offset}"
                 + f"\n  blob_end_offset: {blob_end_offset}"
                 + f"\n  len(blob_data): {len(blob_data)}"
-                + f"\n  blob.type: {blob.type}"
+                + f"\n  blob.type: {blob.type}"  # pyright: ignore[reportUnknownMemberType]
             )
 
             start_offset = blob_offset + blob_start_offset - offset
@@ -295,23 +335,30 @@ class ProtobufUpdateImage(io.RawIOBase):
 
 
 class CPIOUpdateImage(io.RawIOBase):
-    def __init__(self, update_file, cache_size=500, cache_ttl=60):
-        self.update_file = update_file
-        self.cache_size = cache_size
-        self._cache = BlockCache(
+    def __init__(
+        self, update_file: str, cache_size: int = 500, cache_ttl: int = 60
+    ) -> None:
+        self.update_file: str = update_file
+        self.cache_size: int = cache_size
+        self._cache: BlockCache = BlockCache(
             maxsize=cache_size * 1024 * 1024,
             ttl=cache_ttl,
         )
-        self._archive = Archive(self.update_file)
+        self._archive: Archive = Archive(self.update_file)
         self._archive.open()
         if b"sw-description" not in self._archive.keys():
             raise UpdateImageException("Not a swupdate file")
 
-        info = libconf.loads(self._archive["sw-description"].read().decode("utf-8"))[
-            "software"
-        ]
-        self._version = info.get("version")
+        description = self._archive["sw-description"]
+        assert description is not None
+        info = cast(
+            dict[str, dict[str, Any]],  # pyright: ignore[reportExplicitAny]
+            libconf.loads(description.read().decode("utf-8")),  # pyright: ignore[reportUnknownMemberType]
+        )["software"]
+        self._version: str = cast(str, info.get("version"))
 
+        self._hardware_type: str
+        self._info: Any  # pyright: ignore[reportExplicitAny]
         if "reMarkable1" in info:
             self._hardware_type = "reMarkable1"
             self._info = info["reMarkable1"]
@@ -333,18 +380,17 @@ class CPIOUpdateImage(io.RawIOBase):
 
         # TODO - handle non-stable images
         # TODO - handle possibilities of multiple images
-        info = self._info["stable"]["copy1"]["images"][0]
-        entry = self._archive[info["filename"]]
+        entry = self._archive[self._info["stable"]["copy1"]["images"][0]["filename"]]  # pyright: ignore[reportAny]
         self._image: GzipFile = GzipFile(fileobj=entry, mode="rb")
         # Read entire image to allow seeking based on io.SEEK_END
-        while self._image.read(131_672):
+        while self._image.read(131_672):  # pyright: ignore[reportUnknownMemberType]
             pass
 
-        _ = self._image.seek(0, io.SEEK_SET)
+        _ = self._image.seek(0, io.SEEK_SET)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
-    def verify(self, publickey):
+    def verify(self, _publickey: str) -> None:
         # TODO - verify signature
-        def verify_hash(expected_hash, entry):
+        def verify_hash(expected_hash: str, entry: Entry) -> None:
             actual_hash = sha256(entry.peek()).hexdigest()
             if expected_hash != actual_hash:
                 raise UpdateImageException(
@@ -353,21 +399,19 @@ class CPIOUpdateImage(io.RawIOBase):
                     actual_hash,
                 )
 
-        def verify_copy(copy):
-            for image in copy["images"]:
-                verify_hash(image["sha256"], self._archive[image["filename"]])
-
-            for image in copy.get("files", []):
-                verify_hash(image["sha256"], self._archive[image["filename"]])
-
-            for image in copy.get("scripts", []):
-                verify_hash(image["sha256"], self._archive[image["filename"]])
+        def verify_copy(copy: dict[str, list[dict[str, str]]]) -> None:
+            for image in (
+                copy["images"] + copy.get("files", []) + copy.get("scripts", [])
+            ):
+                archive = self._archive[image["filename"]]
+                assert archive is not None
+                verify_hash(image["sha256"], archive)
 
         for copy in ("copy1", "copy2"):
-            verify_copy(self._info["stable"][copy])
+            verify_copy(self._info["stable"][copy])  # pyright: ignore[reportAny]
 
     @property
-    def signature(self):
+    def signature(self) -> str | None:
         # TODO - get from entry
         return None
 
@@ -380,71 +424,83 @@ class CPIOUpdateImage(io.RawIOBase):
         return self._hardware_type
 
     @property
-    def archive(self):
+    def archive(self) -> Archive:
         return self._archive
 
     @property
-    def cache(self):
+    def cache(self) -> BlockCache:
         return self._cache
 
     @property
-    def size(self):
-        return self._image.size
+    def size(self) -> int:
+        return self._image.size  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
-    def expire(self):
-        self._cache.expire()
+    def expire(self) -> None:
+        _ = self._cache.expire()
 
-    def close(self):
+    @override
+    def close(self) -> None:
         try:
             self._archive.close()
 
         finally:
             super().close()
 
-    def writable(self):
+    @override
+    def writable(self) -> bool:
         return False
 
-    def seekable(self):
+    @override
+    def seekable(self) -> bool:
         return True
 
-    def readable(self):
+    @override
+    def readable(self) -> bool:
         return True
 
-    def seek(self, offset, whence=os.SEEK_SET):
-        return self._image.seek(offset, whence)
+    @override
+    def seek(self, offset: int, whence: int = os.SEEK_SET) -> int:
+        return self._image.seek(offset, whence)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
-    def tell(self):
-        return self._image.tell()
+    @override
+    def tell(self) -> int:
+        return self._image.tell()  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
-    def read(self, size=-1):
+    @override
+    def read(self, size: int = -1) -> bytes:
         key = (self.tell(), size)
         if key in self._cache:
             return self._cache[key]
 
-        data = self._image.read(size)
-        if self._cache.will_fit(data):
+        data = self._image.read(size)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        if self._cache.will_fit(data):  # pyright: ignore[reportUnknownArgumentType]
             self._cache[key] = data
 
-        return data
+        return data  # pyright: ignore[reportUnknownVariableType]
 
-    def peek(self, size=0):
+    def peek(self, size: int = 0) -> bytes:
         key = (self.tell(), size)
         if key in self._cache:
             return self._cache[key]
 
-        data = self._image.peek(size)
-        if self._cache.will_fit(data):
+        data = self._image.peek(size)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        if self._cache.will_fit(data):  # pyright: ignore[reportUnknownArgumentType]
             self._cache[key] = data
 
-        return data
+        return data  # pyright: ignore[reportUnknownVariableType]
 
 
 class UpdateImage:
-    def __new__(cls, *args, **kwds):
+    def __new__(
+        cls,
+        update_file: str,
+        cache_size: int = 500,
+        cache_ttl: int = 60,
+    ) -> ProtobufUpdateImage | CPIOUpdateImage:
         try:
-            return ProtobufUpdateImage(*args, **kwds)
+            return ProtobufUpdateImage(update_file, cache_size, cache_ttl)
 
         except UpdateImageException:
             pass
 
-        return CPIOUpdateImage(*args, **kwds)
+        return CPIOUpdateImage(update_file, cache_size, cache_ttl)
