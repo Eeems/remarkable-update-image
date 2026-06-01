@@ -375,6 +375,10 @@ class CPIOUpdateImage(io.RawIOBase):
             self._hardware_type = "chiappa"
             self._info = info["chiappa"]
 
+        elif "tatsu" in info:
+            self._hardware_type = "tatsu"
+            self._info = info["tatsu"]
+
         else:
             raise UpdateImageException("Unsupported swupdate file")
 
