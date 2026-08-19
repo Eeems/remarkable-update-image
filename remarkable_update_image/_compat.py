@@ -28,4 +28,4 @@ class FileObj(Protocol):
     def close(self) -> None: ...
 
 
-__all__ = ["override", "FileObj"]
+__all__ = ["FileObj", "override"]

@@ -32,7 +32,7 @@ from .update_metadata_pb2 import (
 )
 
 
-def sizeof_fmt(num: int | float, suffix: str = "B") -> str:
+def sizeof_fmt(num: float, suffix: str = "B") -> str:
     for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
         if abs(num) < 1024.0:
             return f"{num:3.1f}{unit}{suffix}"
@@ -98,11 +98,11 @@ class ProtobufUpdateImage(io.RawIOBase):
             if magic != b"CrAU":
                 raise UpdateImageException("Wrong header")
 
-            major = cast(int, struct.unpack(">Q", f.read(8))[0])
+            major = struct.unpack(">Q", f.read(8))[0]
             if major != 1:
                 raise UpdateImageException("Unsupported version")
 
-            size = cast(int, struct.unpack(">Q", f.read(8))[0])
+            size = struct.unpack(">Q", f.read(8))[0]
             data = f.read(size)
             self._manifest: DeltaArchiveManifest = DeltaArchiveManifest.FromString(data)  # pyright: ignore[reportUnknownMemberType]
             self._offset: int = f.tell()
@@ -346,7 +346,7 @@ class CPIOUpdateImage(io.RawIOBase):
         )
         self._archive: Archive = Archive(self.update_file)
         self._archive.open()
-        if b"sw-description" not in self._archive.keys():
+        if b"sw-description" not in self._archive.keys():  # noqa: SIM118
             raise UpdateImageException("Not a swupdate file")
 
         description = self._archive["sw-description"]

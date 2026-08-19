@@ -1,18 +1,12 @@
-from .image import UpdateImage
-from .image import UpdateImageException
-from .image import UpdateImageSignatureException
-
-from .cpio import Archive
-from .cpio import Entry
-from .cpio import MagicError
-from .cpio import ChecksumError
+from .cpio import Archive, ChecksumError, Entry, MagicError
+from .image import UpdateImage, UpdateImageException, UpdateImageSignatureException
 
 __all__ = [
+    "Archive",
+    "ChecksumError",
+    "Entry",
+    "MagicError",
     "UpdateImage",
     "UpdateImageException",
     "UpdateImageSignatureException",
-    "Archive",
-    "Entry",
-    "MagicError",
-    "ChecksumError",
 ]

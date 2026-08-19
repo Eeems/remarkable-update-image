@@ -182,7 +182,7 @@ def assert_no_attr(obj: object, attr: str) -> None:
 def assert_in_archive(image: CPIOUpdateImage, key: str) -> None:
     global FAILED
     print(f"checking archive contains {key}: ", end="")
-    if key.encode() in image.archive.keys():
+    if key.encode() in image.archive.keys():  # noqa: SIM118
         print("pass")
         return
 
@@ -202,13 +202,13 @@ def assert_extract(
         with TemporaryFile(mode="wb") as f:
             digest = sha256(image.peek()).hexdigest()
             if expected_digest != digest:
-                raise Exception(f"Incorrect digest: {digest}")
+                raise Exception(f"Incorrect digest: {digest}")  # noqa: TRY002
 
             _ = f.write(image.read())
 
         print("pass")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         FAILED = True
         print("fail")
         print("  ", end="")

@@ -12,8 +12,8 @@ ifeq ($(OS),Windows_NT)
 	ifeq ($(VENV_BIN_ACTIVATE),)
 		VENV_BIN_ACTIVATE := .venv/Scripts/activate
 	endif
-	CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1765093380/windows-latest.zip
-	CODEXCTL_HASH := 5d9b2bb323a33c7f5616aee36940df7c163f43bc81c6b1ff7bcd3aa3c9c489d6
+	CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1782343066/windows-latest.zip
+	CODEXCTL_HASH := 552fe1735894b1779a127b6f1622e93a587b29e12afdf8945e52e74eab1e38d4
 	CODEXCTL_BIN := codexctl.exe
 else
 	ifeq ($(VENV_BIN_ACTIVATE),)
@@ -21,11 +21,11 @@ else
 	endif
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
-		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1765093380/macos-latest.zip
-		CODEXCTL_HASH := 7e530f5f0995f9778e591ed22a314494885a7cfcfd26aa655fbabf2ae960c5de
+		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1782343066/macos-latest.zip
+		CODEXCTL_HASH := b3e799f379b99d23f9465aef6219e4bf7c37ee244f6f8dcee40e7c886fb91271
 	else
-		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1765093380/ubuntu-latest.zip
-		CODEXCTL_HASH := 9cf5b27e95e7cc1a961e41e26c8b71cd38f77fad38f819fdfced2ee1f3e2ebd3
+		CODEXCTL := https://github.com/Jayy001/codexctl/releases/download/1782343066/ubuntu-latest.zip
+		CODEXCTL_HASH := ee42717fdfc7213c530198695c4b41038f14642fdd393a8ed71d5c14b9136662
 	endif
 	CODEXCTL_BIN := codexctl
 endif
