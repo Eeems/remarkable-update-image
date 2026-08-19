@@ -361,7 +361,7 @@ class Archive:
             return
 
         if isinstance(self.fileOrPath, str):
-            self.fileobj = open(self.fileOrPath, "rb")
+            self.fileobj = open(self.fileOrPath, "rb")  # noqa: SIM115
 
         else:
             self.fileobj = self.fileOrPath
